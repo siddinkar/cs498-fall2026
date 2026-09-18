@@ -1,0 +1,43 @@
+\documentclass[11pt]{article}
+\usepackage[margin=0.85in]{geometry}
+\usepackage{amsmath,booktabs,graphicx,hyperref}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+
+\title{CS 498: HW1 Report}
+\author{Your Name}
+\date{Fall 2026}
+
+\begin{document}
+\maketitle
+
+\section{Rigid fitting and RANSAC}
+Report SVD and RANSAC translation/rotation errors, inlier ratio, inlier RMSE,
+and both alignment figures. Briefly explain the RANSAC threshold tradeoff.
+
+\section{Real-data ICP and odometry}
+Include the Open3D demo before/after alignment, ICP convergence, GT/ICP 2D
+trajectory, and GT/ICP accumulated BEV. State the ICP iteration-video filename.
+Also state the online odometry-video filename and explain what its current-sweep
+and accumulated-intensity panels reveal about local alignment and drift. Note
+how the inferred trajectory overlay grows through the current frame.
+Report demo final RMSE, planar XY odometry ATE (first pose identity, no further
+alignment), mean one-step translation RTE, and mean
+one-step rotation RTE. Identify where drift appears in both the path and mapped
+structures.
+
+\section{Semantic voxel mapping}
+First estimate the shape, voxel count, and float32 score memory for the dense
+grid posed in the handout, and explain why the map should be sparse.
+Include the Open3D shoulder-view cube map and state both MP4 filenames: the
+turntable and the side-by-side moving LiDAR/map view. Report frames aggregated,
+occupied voxels, voxel accuracy, per-class IoU for present classes, mean IoU,
+observation-count statistics, and mean normalized entropy of mean log evidence.
+Confirm that \texttt{voxel\_coordinates\_correct} is true. Discuss one region
+with competing semantic evidence and one limitation of weighting all
+observations equally. Briefly relate voxel size to detail and memory.
+
+\section{Failure analysis}
+Connect one visual failure to a specific registration or fusion assumption.
+
+\end{document}

@@ -1,0 +1,8 @@
+# Python 3.12; graphics drivers are checked separately by preflight.py --render.
+numpy>=1.26,<3
+scipy>=1.11,<2
+torch>=2.2,<3
+matplotlib>=3.8,<4
+open3d==0.19.0
+imageio>=2.34,<3
+imageio-ffmpeg>=0.5,<1
