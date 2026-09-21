@@ -62,14 +62,14 @@ TENNIS_UV = np.array(
 # origin and axes defined in the handout, and keep the A--H order unchanged.
 TENNIS_XY = np.array(
     [
-        [0.0, 0.0],  # A: replace
-        [0.0, 0.0],  # B: replace
-        [0.0, 0.0],  # C: replace
-        [0.0, 0.0],  # D: replace
-        [0.0, 0.0],  # E: replace
-        [0.0, 0.0],  # F: replace
-        [0.0, 0.0],  # G: replace
-        [0.0, 0.0],  # H: replace
+        [-5.485, 0.0],    # A: near left doubles corner
+        [5.485, 0.0],     # B: near right doubles corner
+        [-5.485, 23.77],  # C: far left doubles corner
+        [5.485, 23.77],   # D: far right doubles corner
+        [-4.115, 0.0],    # E: near left singles corner
+        [4.115, 0.0],     # F: near right singles corner
+        [-4.115, 23.77],  # G: far left singles corner
+        [4.115, 23.77],   # H: far right singles corner
     ],
     dtype=float,
 )
