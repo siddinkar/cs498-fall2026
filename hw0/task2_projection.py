@@ -36,11 +36,33 @@ def estimate_projection_matrix(xyz: np.ndarray, uv: np.ndarray) -> np.ndarray:
     design matrix using its matching UV pixel, solve the right null space with
     SVD, reshape to 3 x 4, and choose a stable scale.
     """
-    del xyz, uv
-    intrinsic = np.array([[1000.0, 0.0, 960.0], [0.0, 1000.0, 540.0], [0.0, 0.0, 1.0]])
-    rotation = np.diag([1.0, -1.0, -1.0])
-    camera_center = np.array([14.0, -15.0, 10.0])
-    return intrinsic @ np.column_stack((rotation, -rotation @ camera_center))
+    cent_xyz = xyz.mean(axis=0)
+    cent_uv = uv.mean(axis=0)
+    N = len(xyz)
+    
+    s_xyz = np.sqrt(3) / np.linalg.norm(xyz - cent_xyz, axis=1).mean()
+    s_uv = np.sqrt(2) / np.linalg.norm(uv - cent_uv, axis=1).mean()
+    T_xyz = np.array([[s_xyz, 0, 0, -s_xyz * cent_xyz[0]], [0, s_xyz, 0, -s_xyz * cent_xyz[1]], [0, 0, s_xyz, -s_xyz * cent_xyz[2]], [0, 0, 0, 1]])
+    T_uv = np.array([[s_uv, 0, -s_uv * cent_uv[0]], [0, s_uv, -s_uv * cent_uv[1]], [0, 0, 1]])
+
+    hom_xyz = np.hstack([xyz, np.ones((N, 1))])
+    hom_uv = np.hstack([uv, np.ones((N, 1))])
+
+    normalized_xyz = (T_xyz @ hom_xyz.T).T
+    normalized_uv = (T_uv @ hom_uv.T).T
+
+    A = np.zeros((2 * N, 12))
+    for i in range(N):
+        x, y, z = normalized_xyz[i, 0], normalized_xyz[i, 1], normalized_xyz[i, 2]
+        u, v = normalized_uv[i, 0], normalized_uv[i, 1]
+        A[2 * i] = [-x, -y, -z, -1,  0,  0,  0, 0, u*x, u*y, u*z, u]
+        A[2 * i + 1] = [0,  0,  0, 0, -x, -y, -z, -1,  v*x, v*y, v*z, v]
+
+    U, S, Vt = np.linalg.svd(A)
+    H = Vt[-1].reshape(3, 4)
+
+    H_final = np.linalg.inv(T_uv) @ H @ T_xyz
+    return H_final / np.linalg.norm(H_final)
 
 
 # ------------------- DO NOT MODIFY CODE OUTSIDE THE BLOCK --------------------
