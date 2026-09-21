@@ -85,7 +85,34 @@ def estimate_homography(xy: np.ndarray, uv: np.ndarray) -> np.ndarray:
       3. use SVD to take its right-null-space vector;
       4. reshape, denormalize, and choose a stable matrix scale.
     """
-    return np.eye(3)  # Runnable placeholder: replace with your estimate.
+    cent_xy = xy.mean(axis=0)
+    cent_uv = uv.mean(axis=0)
+    N = len(xy)
+    
+    s_xy = np.sqrt(2) / np.linalg.norm(xy - cent_xy, axis=1).mean()
+    s_uv = np.sqrt(2) / np.linalg.norm(uv - cent_uv, axis=1).mean()
+    T_xy = np.array([[s_xy, 0, -s_xy * cent_xy[0]], [0, s_xy, -s_xy * cent_xy[1]], [0, 0, 1]])
+    T_uv = np.array([[s_uv, 0, -s_uv * cent_uv[0]], [0, s_uv, -s_uv * cent_uv[1]], [0, 0, 1]])
+
+    hom_xy = np.hstack([xy, np.ones((N, 1))])
+    hom_uv = np.hstack([uv, np.ones((N, 1))])
+
+    normalized_xy = (T_xy @ hom_xy.T).T
+    normalized_uv = (T_uv @ hom_uv.T).T
+
+    A = np.zeros((2 * N, 9))
+    for i in range(N):
+        x, y = normalized_xy[i, 0], normalized_xy[i, 1]
+        u, v = normalized_uv[i, 0], normalized_uv[i, 1]
+        A[2 * i] = [-x, -y, -1,  0,  0,  0,  u*x, u*y, u]
+        A[2 * i + 1] = [0,  0,  0, -x, -y, -1,  v*x, v*y, v]
+
+    U, S, Vt = np.linalg.svd(A)
+    H = Vt[-1].reshape(3, 3)
+
+    H_final = np.linalg.inv(T_uv) @ H @ T_xy
+    return H_final / np.linalg.norm(H_final)
+
 
 
 def logo_to_image_homography(
@@ -100,8 +127,8 @@ def logo_to_image_homography(
     court_to_image. Include the vertical flip because logo pixel y points down
     while court y points up.
     """
-    del logo_shape, lower_left_xy, size_xy
-    return np.asarray(court_to_image, dtype=float)  # Runnable placeholder.
+    M_logo_to_court = np.array([[size_xy[0] / logo_shape[1], 0, lower_left_xy[0]], [0, -size_xy[1] / logo_shape[0], lower_left_xy[1] + size_xy[1]], [0, 0, 1]])
+    return court_to_image @ M_logo_to_court
 
 
 def alpha_blend(foreground_rgba: np.ndarray, background_rgb: np.ndarray) -> np.ndarray:
@@ -111,8 +138,11 @@ def alpha_blend(foreground_rgba: np.ndarray, background_rgb: np.ndarray) -> np.n
     handout. Alpha is the final channel of foreground_rgba and must blend all
     three foreground RGB channels with the matching background pixel.
     """
-    del foreground_rgba
-    return np.asarray(background_rgb, dtype=float).copy()  # Runnable placeholder.
+    F = foreground_rgba[:, :, 0:3]
+    alpha = foreground_rgba[:, :, 3:]
+    B = np.asarray(background_rgb, dtype=float)
+
+    return alpha * F + (1 - alpha) * B
 
 
 # ------------------- DO NOT MODIFY CODE OUTSIDE THE BLOCK --------------------
