@@ -94,11 +94,11 @@ eight-anchor reprojection RMSE of $3.67$~px (Fig.~\ref{fig:t1c}). The near
 anchors carry 4 to 6~px and the far anchors about 1~px.
 
 \begin{figure}[h]\centering
-\begin{subfigure}{0.49\linewidth}\includegraphics[width=\linewidth]{task1c_tennis_correspondences.png}
+\begin{subfigure}{0.32\linewidth}\includegraphics[width=\linewidth]{task1c_tennis_correspondences.png}
 \caption{Supplied anchors A--H.}\end{subfigure}\hfill
-\begin{subfigure}{0.49\linewidth}\includegraphics[width=\linewidth]{task1c_tennis_alignment.png}
-\caption{Given anchors in green, reprojected in orange.}\end{subfigure}\\[4pt]
-\begin{subfigure}{0.49\linewidth}\includegraphics[width=\linewidth]{task1c_tennis_insertion.png}
+\begin{subfigure}{0.32\linewidth}\includegraphics[width=\linewidth]{task1c_tennis_alignment.png}
+\caption{Given anchors in green, reprojected in orange.}\end{subfigure}\hfill
+\begin{subfigure}{0.32\linewidth}\includegraphics[width=\linewidth]{task1c_tennis_insertion.png}
 \caption{Logo in $[-3,3]\times[0.5,3.5]$~m.}\end{subfigure}
 \caption{Tennis transfer using the coordinates above and unchanged Task 1 code.}\label{fig:t1c}
 \end{figure}
@@ -160,11 +160,11 @@ than a calibration; the negative focal terms and large skew in $K$ reflect
 that.
 
 \begin{figure}[h]\centering
-\begin{subfigure}{0.49\linewidth}\includegraphics[width=\linewidth]{task2a_reprojection.png}
+\begin{subfigure}{0.32\linewidth}\includegraphics[width=\linewidth]{task2a_reprojection.png}
 \caption{2A: eight landmarks reprojected by $P$.}\end{subfigure}\hfill
-\begin{subfigure}{0.49\linewidth}\includegraphics[width=\linewidth]{task2b_bunny_insertion.png}
-\caption{2B: bunny at center court, colored by height.}\end{subfigure}\\[4pt]
-\begin{subfigure}{0.49\linewidth}\includegraphics[width=\linewidth]{task2c_camera_pose.png}
+\begin{subfigure}{0.32\linewidth}\includegraphics[width=\linewidth]{task2b_bunny_insertion.png}
+\caption{2B: bunny at center court, colored by height.}\end{subfigure}\hfill
+\begin{subfigure}{0.32\linewidth}\includegraphics[width=\linewidth]{task2c_camera_pose.png}
 \caption{2C: recovered camera center and viewing direction.}\end{subfigure}
 \caption{Camera matrix estimation, 3D insertion, and pose.}\label{fig:t2}
 \end{figure}
@@ -241,8 +241,8 @@ frames would remove the systematic near-versus-far error pattern.
 I implemented the complete bonus pipeline in \path{bonus_tennis_video.py}
 without any provided helper. Video loading, background estimation, the
 foreground mask, logo insertion, composition and output writing are all in that
-file; the only reused code is my Task 1 \texttt{estimate\_homography},
-\texttt{logo\_to\_image\_homography} and \texttt{alpha\_blend}.
+file. The only reused code is my Task 1 functions \path{estimate_homography},
+\path{logo_to_image_homography} and \path{alpha_blend}.
 
 \paragraph{Background estimate.} Every clip has a fixed camera, so the per-pixel temporal
 median of 45 frames sampled evenly across the clip removes the moving players
@@ -264,18 +264,18 @@ around the logo footprint. The representative frame for each clip is the one
 where $m$ overlaps the logo most (Fig.~\ref{fig:bonus}), and
 \path{match005_occlusion_aware.mp4} holds all 250 composited frames.
 
-\begin{figure}[p]\centering
-\begin{subfigure}{0.49\linewidth}\includegraphics[width=\linewidth]{match001_representative.png}
+\begin{figure}[H]\centering
+\begin{subfigure}{0.32\linewidth}\includegraphics[width=\linewidth]{match001_representative.png}
 \caption{match001, frame 500.}\end{subfigure}\hfill
-\begin{subfigure}{0.49\linewidth}\includegraphics[width=\linewidth]{match005_representative.png}
-\caption{match005, frame 3.}\end{subfigure}\\[4pt]
-\begin{subfigure}{0.49\linewidth}\includegraphics[width=\linewidth]{match028_representative.png}
-\caption{match028, frame 131.}\end{subfigure}\hfill
-\begin{subfigure}{0.49\linewidth}\includegraphics[width=\linewidth]{match091_representative.png}
-\caption{match091, frame 356.}\end{subfigure}\\[4pt]
-\begin{subfigure}{0.49\linewidth}\includegraphics[width=\linewidth]{match125_representative.png}
+\begin{subfigure}{0.32\linewidth}\includegraphics[width=\linewidth]{match005_representative.png}
+\caption{match005, frame 3.}\end{subfigure}\hfill
+\begin{subfigure}{0.32\linewidth}\includegraphics[width=\linewidth]{match028_representative.png}
+\caption{match028, frame 131.}\end{subfigure}\\[4pt]
+\begin{subfigure}{0.32\linewidth}\includegraphics[width=\linewidth]{match091_representative.png}
+\caption{match091, frame 356.}\end{subfigure}\hfill
+\begin{subfigure}{0.32\linewidth}\includegraphics[width=\linewidth]{match125_representative.png}
 \caption{match125, frame 578.}\end{subfigure}\hfill
-\begin{subfigure}{0.49\linewidth}\includegraphics[width=\linewidth]{match005_mask_crop.png}
+\begin{subfigure}{0.32\linewidth}\includegraphics[width=\linewidth]{match005_mask_crop.png}
 \caption{Soft mask for the match005 frame, logo region.}\end{subfigure}
 \caption{Occlusion-aware insertion: the player stays in front of the logo in every clip.}\label{fig:bonus}
 \end{figure}
