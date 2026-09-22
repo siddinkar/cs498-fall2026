@@ -14,3 +14,6 @@ venv/
 *.synctex.gz
 *.fdb_latexmk
 *.fls
+
+# Submission archives
+*.zip
