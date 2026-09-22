@@ -1,0 +1,47 @@
+[
+  {
+    "clip": "match001",
+    "frames_processed": 600,
+    "fps": 60.0,
+    "anchor_rmse_px": 0.325,
+    "representative_frame": 500,
+    "player_logo_overlap_px": 2043.3,
+    "seconds": 15.5
+  },
+  {
+    "clip": "match005",
+    "frames_processed": 250,
+    "fps": 25.0,
+    "anchor_rmse_px": 3.67,
+    "representative_frame": 3,
+    "player_logo_overlap_px": 563.0,
+    "seconds": 20.0
+  },
+  {
+    "clip": "match028",
+    "frames_processed": 247,
+    "fps": 25.0,
+    "anchor_rmse_px": 0.192,
+    "representative_frame": 131,
+    "player_logo_overlap_px": 3770.2,
+    "seconds": 15.1
+  },
+  {
+    "clip": "match091",
+    "frames_processed": 600,
+    "fps": 60.0,
+    "anchor_rmse_px": 2.203,
+    "representative_frame": 356,
+    "player_logo_overlap_px": 4436.3,
+    "seconds": 13.3
+  },
+  {
+    "clip": "match125",
+    "frames_processed": 600,
+    "fps": 60.0,
+    "anchor_rmse_px": 0.909,
+    "representative_frame": 578,
+    "player_logo_overlap_px": 6664.1,
+    "seconds": 15.3
+  }
+]

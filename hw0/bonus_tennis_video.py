@@ -228,7 +228,7 @@ def process_clip(name: str, logo_bgra: np.ndarray, out_dir: Path, samples: int, 
     writer = None
     if write_video:
         video_out = out_dir / f"{name}_occlusion_aware.mp4"
-        for fourcc in ("avc1", "mp4v"):
+        for fourcc in ("mp4v", "avc1"):  # mp4v is available in every OpenCV build; avc1 is a fallback
             writer = cv2.VideoWriter(str(video_out), cv2.VideoWriter_fourcc(*fourcc), fps, (width, height))
             if writer.isOpened():
                 break
