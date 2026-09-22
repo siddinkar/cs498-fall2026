@@ -1,63 +1,291 @@
 \documentclass[11pt]{article}
 \usepackage[margin=0.85in]{geometry}
 \usepackage[T1]{fontenc}
-\usepackage{amsmath,amssymb,booktabs,graphicx,xurl,hyperref}
-\graphicspath{{outputs/task1/}{outputs/task2/}{outputs/task3/}}
+\usepackage{amsmath,amssymb,booktabs,graphicx,xurl,subcaption,float}
+\usepackage[hidelinks]{hyperref}
+\newcommand{\widerow}[1]{\noindent\makebox[\linewidth][c]{#1}}
+\graphicspath{{report_figs/}{outputs/task1/}{outputs/task2/}{outputs/task3/}{outputs/bonus/}}
 
 \title{CS 498 HW0 Report\\Perspective, Homography, and Epipolar Geometry}
-\author{Your Name (NetID)}
+\author{Siddharth Dinkar (sdinkar2)}
 \date{Fall 2026}
 
 \begin{document}
 \maketitle
 
 \section{Homography and 2D insertion}
-State your point normalization and DLT construction. Explain the transform
-from logo pixels to the metric court rectangle and then to the image. Include
-\path{task1a_basketball_homography.png} and
-\path{task1b_basketball_insertion.png}, report the maximum corner-transfer
-error, and explain your alpha-composition equation.
+
+\paragraph{Normalization.} Before building any linear system I precondition each 2D point
+set separately. For a set with centroid $\mathbf c$ and mean distance $d$ from
+that centroid, the similarity
+\[
+T=\begin{bmatrix} s & 0 & -s\,c_x\\ 0 & s & -s\,c_y\\ 0 & 0 & 1\end{bmatrix},
+\qquad s=\sqrt{2}/d ,
+\]
+moves the centroid to the origin and scales the mean radius to $\sqrt2$. I build
+$T_{xy}$ from the court points and $T_{uv}$ from the pixels. Without this step
+the columns of the design matrix range from $1$ to $u\cdot x\approx 10^4$ and the
+smallest singular vector is poorly determined.
+
+\paragraph{DLT.} With $\mathbf p=[x,y,1]^\top$ and $H$ written as rows
+$\mathbf h_1,\mathbf h_2,\mathbf h_3$, the relation $\lambda[u,v,1]^\top=H\mathbf p$
+loses $\lambda$ by substituting the third component into the first two, giving
+two rows per point,
+\[
+\begin{bmatrix}-\mathbf p^\top & \mathbf 0^\top & u\,\mathbf p^\top\\
+\mathbf 0^\top & -\mathbf p^\top & v\,\mathbf p^\top\end{bmatrix}
+\begin{bmatrix}\mathbf h_1\\ \mathbf h_2\\ \mathbf h_3\end{bmatrix}=\mathbf 0 .
+\]
+Stacking all points gives a $2N\times 9$ matrix $A$. The right singular vector of
+$A$ with the smallest singular value is the unit vector minimizing
+$\|A\mathbf h\|$; I reshape it row-major to $3\times3$, undo the normalization
+with $H=T_{uv}^{-1}H'T_{xy}$, and divide by the Frobenius norm.
+
+\paragraph{Logo placement.} A logo pixel $(p_x,p_y)$ in an $h\times w$ image is first mapped
+to the metric rectangle with lower-left corner $(x_0,y_0)$ and size $(W,L)$,
+then through $H$:
+\[
+M_{\text{logo}\to\text{court}}=\begin{bmatrix} W/w & 0 & x_0\\ 0 & -L/h & y_0+L\\ 0&0&1\end{bmatrix},
+\qquad
+M_{\text{logo}\to\text{image}}=H\,M_{\text{logo}\to\text{court}} .
+\]
+The negative entry flips the vertical axis because pixel rows grow downward
+while court $y$ grows upward. The provided bilinear inverse warp uses the
+composed matrix. Compositing is the handout equation applied per pixel and
+channel, $I_\text{out}=\alpha I_\text{logo}+(1-\alpha)I_\text{court}$, where
+$\alpha$ is the fourth channel of the warped logo.
+
+\paragraph{Results.} The maximum corner-transfer error on the four basketball corners is
+$5.1\times10^{-13}$~px, which is zero up to floating point. Four points give
+eight equations for eight unknowns, so the fit is exact by construction.
+
+\begin{figure}[h]\centering
+\widerow{%
+\begin{subfigure}{0.585\linewidth}\includegraphics[width=\linewidth]{task1a_basketball_homography.png}
+\caption{1A: given corners as crosses, $H$-projected corners as circles.}\end{subfigure}\hspace{0.01\linewidth}%
+\begin{subfigure}{0.585\linewidth}\includegraphics[width=\linewidth]{task1b_basketball_insertion.png}
+\caption{1B: $6\times3$~m logo composited at lower-left $(23.0,\,2.5)$~m.}\end{subfigure}}
+\caption{Basketball homography fit and logo insertion.}\label{fig:t1}
+\end{figure}
 
 \subsection{Tennis transfer and camera height}
-List the A--H metric XY coordinates you derived for the supplied UV points. Include
-\path{task1c_tennis_correspondences.png},
-\path{task1c_tennis_insertion.png} and
-\path{task1c_tennis_alignment.png}. Report the eight-anchor reprojection RMSE and explain why
-a planar homography with unknown intrinsics does not determine a unique camera
-height.
+
+The course frame puts the origin at the center of the near baseline with $+x$
+across the court and $+y$ toward the far baseline. Using the regulation length
+$23.77$~m, doubles width $10.97$~m and singles width $8.23$~m, the metric
+coordinates for the supplied anchors are:
+
+\begin{center}\small
+\begin{tabular}{@{}llrr@{}}\toprule
+ & intersection & $x$ (m) & $y$ (m)\\\midrule
+A & near left doubles corner & $-5.485$ & $0$\\
+B & near right doubles corner & $5.485$ & $0$\\
+C & far left doubles corner & $-5.485$ & $23.77$\\
+D & far right doubles corner & $5.485$ & $23.77$\\
+E & near left singles corner & $-4.115$ & $0$\\
+F & near right singles corner & $4.115$ & $0$\\
+G & far left singles corner & $-4.115$ & $23.77$\\
+H & far right singles corner & $4.115$ & $23.77$\\\bottomrule
+\end{tabular}
+\end{center}
+
+Running the same three functions on frame 0 of \path{match005.mp4} gives an
+eight-anchor reprojection RMSE of $3.67$~px (Fig.~\ref{fig:t1c}). The near
+anchors carry 4 to 6~px and the far anchors about 1~px.
+
+\begin{figure}[h]\centering
+\begin{subfigure}{0.49\linewidth}\includegraphics[width=\linewidth]{task1c_tennis_correspondences.png}
+\caption{Supplied anchors A--H.}\end{subfigure}\hfill
+\begin{subfigure}{0.49\linewidth}\includegraphics[width=\linewidth]{task1c_tennis_alignment.png}
+\caption{Given anchors in green, reprojected in orange.}\end{subfigure}\\[4pt]
+\begin{subfigure}{0.49\linewidth}\includegraphics[width=\linewidth]{task1c_tennis_insertion.png}
+\caption{Logo in $[-3,3]\times[0.5,3.5]$~m.}\end{subfigure}
+\caption{Tennis transfer using the coordinates above and unchanged Task 1 code.}\label{fig:t1c}
+\end{figure}
+
+\paragraph{Camera height.} For a planar scene the camera matrix loses its third column, so
+$H\sim K[\mathbf r_1\;\mathbf r_2\;\mathbf t]$; $\mathbf r_3$ never appears
+because every court point has $Z=0$. With $K$ unknown this product cannot be
+split apart. A floor point projects to $u=f\,X_c/Z_c+c_x$, so moving the camera
+twice as far away doubles $Z_c$ and doubling the focal length doubles $f$; the
+two changes cancel and every floor pixel stays put. Two cameras at different
+heights therefore produce the same $H$. Counting degrees of freedom says the
+same thing: $H$ has 8, while $K$ (5), $R$ (3) and $\mathbf t$ (3) have 11, so a
+three-parameter family of cameras shares each $H$. The basketball scene breaks
+the tie with the four backboard corners at $Z>0$. Those points constrain the
+column of $P$ that the plane discards, so the full $3\times4$ matrix, and from
+it $K$, $R$ and the height, become observable without knowing $K$ in advance.
 
 \section{Camera projection and 3D insertion}
-Describe the projection DLT and explain how knowledge of $K$ determines whether
-the metric court plane is sufficient or non-coplanar landmarks are needed.
-Include \path{task2b_bunny_insertion.png},
-\path{task2a_reprojection.png}, and \path{task2c_camera_pose.png}. Report
-the mean and maximum reprojection error, $K$, $R$, $t$, $C$, and the optical-center
-height. Verify $C=-R^\top t$.
+
+\paragraph{Projection DLT.} The construction is the Task 1 DLT with a 3D point. With
+$\mathbf X=[X,Y,Z,1]^\top$ and $P$ written as rows $\mathbf p_1,\mathbf p_2,\mathbf p_3\in\mathbb R^4$,
+each landmark contributes the rows
+$[-\mathbf X^\top,\;\mathbf 0^\top,\;u\mathbf X^\top]$ and
+$[\mathbf 0^\top,\;-\mathbf X^\top,\;v\mathbf X^\top]$ to a $2N\times12$ system.
+I normalize the 3D points with a $4\times4$ similarity that scales the mean
+radius to $\sqrt3$ and the pixels with the $3\times3$ transform from Task 1,
+take the last row of $V^\top$, reshape to $3\times4$, undo with
+$P=T_{uv}^{-1}P'T_{xyz}$, and fix the Frobenius norm. $P$ has 11 degrees of
+freedom so at least 6 points are needed; all eight landmarks are used.
+
+\paragraph{Role of $K$.} If every landmark had $Z=0$, the four $Z$ columns of the $2N\times12$
+design matrix would be identically zero. The three entries of $P$ in its $Z$
+column would then multiply nothing, so any values for them satisfy
+$A\mathbf p=\mathbf 0$ and the null space has dimension at least four; the SVD
+returns an arbitrary vector from it and the problem collapses to the homography
+of Task 1. Whether that is a problem depends on $K$. If $K$ is known, the plane
+is enough: $K^{-1}H=[\mathbf r_1\;\mathbf r_2\;\mathbf t]$ up to scale, and
+$\mathbf r_3=\mathbf r_1\times\mathbf r_2$ completes the rotation. If $K$ is
+unknown, as here, $H$ cannot be factored and points off the plane are needed to
+pin down all four columns of $P$. Deleting the $Z$ column of my estimated $P$
+gives back my Task 1 $H$ to within $0.0014$ after scaling both to unit norm,
+which confirms the two tasks estimate the same camera.
+
+\paragraph{Results.} The mean and maximum landmark reprojection errors are $2.75$~px and
+$5.10$~px (Fig.~\ref{fig:t2}). The court corners are within $1.7$~px; the four
+small, distant backboard corners carry 4 to 5~px. The provided decomposition
+returns
+\[
+K\approx\begin{bmatrix}-763.9&-258.9&481.8\\0&-361.8&-202.2\\0&0&1\end{bmatrix},\quad
+R\approx\begin{bmatrix}-0.706&-0.708&-0.019\\0.602&-0.614&0.510\\-0.372&0.349&0.860\end{bmatrix},\quad
+\mathbf t\approx\begin{bmatrix}22.72\\-39.86\\17.21\end{bmatrix},
+\]
+with $C=(46.45,\,-14.41,\,5.95)$~m, so the optical center sits $5.95$~m above the
+court. Loading \path{task2_results.npz} and computing $-R^\top\mathbf t$
+reproduces $C$ to $7\times10^{-15}$~m per component; $R^\top R=I$ with
+$\det R=1$; and $P\,[C;1]=\mathbf 0$, so $C$ is the null vector of $P$. Following
+the handout, $K$, $R$ and $\mathbf t$ are treated as noisy DLT estimates rather
+than a calibration; the negative focal terms and large skew in $K$ reflect
+that.
+
+\begin{figure}[h]\centering
+\begin{subfigure}{0.49\linewidth}\includegraphics[width=\linewidth]{task2a_reprojection.png}
+\caption{2A: eight landmarks reprojected by $P$.}\end{subfigure}\hfill
+\begin{subfigure}{0.49\linewidth}\includegraphics[width=\linewidth]{task2b_bunny_insertion.png}
+\caption{2B: bunny at center court, colored by height.}\end{subfigure}\\[4pt]
+\begin{subfigure}{0.49\linewidth}\includegraphics[width=\linewidth]{task2c_camera_pose.png}
+\caption{2C: recovered camera center and viewing direction.}\end{subfigure}
+\caption{Camera matrix estimation, 3D insertion, and pose.}\label{fig:t2}
+\end{figure}
 
 \section{Two-view epipolar geometry}
-Describe the two point normalizations, eight-point design matrix, and rank-two
-enforcement. Include \path{task3b_correspondences.png} and
-\path{task3b_epipolar_lines.png}. Report the rank, mean symmetric epipolar
-distance, and median distance; explain why real correspondence residuals are
-not exactly zero.
+
+\paragraph{Method.} Each match row is $(u_1,v_1,u_2,v_2)$. The two views are normalized
+independently with $T_1$ and $T_2$ as in Task 1. The epipolar constraint
+$\mathbf x_2^\top F\mathbf x_1=0$ is already linear in $F$, so each match gives a
+single row
+$[u_2u_1,\;u_2v_1,\;u_2,\;v_2u_1,\;v_2v_1,\;v_2,\;u_1,\;v_1,\;1]$ of an
+$N\times9$ matrix. The last row of $V^\top$ reshaped to $3\times3$ is $\tilde F$.
+A second SVD enforces rank two, $F'=U\,\mathrm{diag}(\sigma_1,\sigma_2,0)\,V^\top$,
+which is the nearest rank-2 matrix in Frobenius norm. Because the constraint is
+bilinear the denormalization is $F=T_2^\top F' T_1$, a transpose rather than an
+inverse. $F$ is then scaled to unit Frobenius norm.
+
+\paragraph{Results.} From the eight supplied matches,
+\[
+F\approx\begin{bmatrix}-2.20\times10^{-9}&1.06\times10^{-7}&-1.38\times10^{-4}\\
+2.68\times10^{-7}&2.54\times10^{-8}&7.05\times10^{-4}\\
+-2.97\times10^{-4}&-1.46\times10^{-3}&1.00\end{bmatrix},
+\qquad \operatorname{rank}F=2 .
+\]
+Over all 200 evaluation matches the symmetric epipolar distance has mean
+$5.58$~px and median $4.52$~px (Fig.~\ref{fig:t3}).
+
+\paragraph{Why the residuals are nonzero.} Four effects keep the residuals away from zero. The 200 keypoints come from a
+feature detector on real photographs and are localized to roughly a pixel, so
+each match carries noise before $F$ is estimated. $F$ was fitted to only 8 of
+the 200 matches, and the other 192 cannot be predicted better than the fit
+itself. The rank-2 projection moves $F$ off the exact null vector, so even the 8
+fitted points no longer lie exactly on their lines; their mean error is
+$1.7$~px. Finally, $F$ assumes ideal pinhole cameras and cannot absorb lens
+distortion. Refitting with all 200 matches lowers the mean to $2.8$~px, which
+shows the remaining error is a property of the data rather than the code.
+
+\begin{figure}[h]\centering
+\widerow{%
+\begin{subfigure}{0.585\linewidth}\includegraphics[width=\linewidth]{task3b_correspondences.png}
+\caption{Ten of the supplied correspondences.}\end{subfigure}\hspace{0.01\linewidth}%
+\begin{subfigure}{0.585\linewidth}\includegraphics[width=\linewidth]{task3b_epipolar_lines.png}
+\caption{Epipolar lines from $F$; each passes near its match.}\end{subfigure}}
+\caption{Two-view geometry on the fountain pair.}\label{fig:t3}
+\end{figure}
 
 \section{Limitations and improvements}
-Discuss annotation precision, degenerate configurations, and at least two
-possible improvements.
+
+Annotation precision. The basketball error is exactly zero only because four
+points give eight equations for eight unknowns; any click error is absorbed into
+$H$ instead of appearing as residual, so that number says nothing about
+accuracy. The tennis ($3.7$~px), landmark ($2.8$~px) and epipolar ($5.6$~px)
+fits are overdetermined, and their residuals are the click and detection noise
+finally becoming visible. The near-baseline tennis anchors are the worst
+because perspective spreads a pixel of error there over more meters of court.
+
+Degenerate configurations. The homography fails if three or more of the
+points are collinear. The projection DLT fails when all landmarks are coplanar,
+the $Z=0$ case discussed in Section 2. The eight-point algorithm fails for a
+pure rotation between views, since without a baseline there are no epipolar
+lines, and when all matched points lie on one plane, since a homography then
+explains the matches and $F$ is not unique.
+
+Improvements. First, the DLT minimizes an algebraic residual rather than pixel
+distance; a few iterations of nonlinear least squares on reprojection or
+Sampson error after the linear solve would reduce the geometric error directly.
+Second, $F$ should be estimated from all 200 matches with RANSAC rather than
+from eight hand-picked ones, so that a large inlier set averages out the
+detection noise. Third, a radial distortion model for the broadcast tennis
+frames would remove the systematic near-versus-far error pattern.
 
 \section*{Optional foreground-preserving video bonus}
-If attempted, describe your background estimate, foreground alpha, and final
-composition. State that you implemented the complete bonus pipeline without a
-provided helper. Submit \path{bonus_tennis_video.py}, one representative PNG
-for each of match001, match005, match028, match091, and match125, and one final
-MP4 for match005. This is the only section in which Gen-AI leverage is allowed.
+
+I implemented the complete bonus pipeline in \path{bonus_tennis_video.py}
+without any provided helper. Video loading, background estimation, the
+foreground mask, logo insertion, composition and output writing are all in that
+file; the only reused code is my Task 1 \texttt{estimate\_homography},
+\texttt{logo\_to\_image\_homography} and \texttt{alpha\_blend}.
+
+\paragraph{Background estimate.} Every clip has a fixed camera, so the per-pixel temporal
+median of 45 frames sampled evenly across the clip removes the moving players
+and leaves the empty court.
+
+\paragraph{Foreground alpha.} For each frame I take the maximum absolute color difference
+to that background, pass it through a smooth ramp between $0.10$ and $0.28$,
+clean it with a morphological opening (speckle) and closing (holes inside
+players), dilate slightly, and Gaussian blur to feather the edges. The result is
+a soft mask $m\in[0,1]$.
+
+\paragraph{Composition.} The logo is warped with the Task 1 homography built from the clip's
+eight supplied image anchors and the metric A--H coordinates above, dimmed by
+the ratio of live to background luminance so shadows fall across it, and blended
+with effective alpha $\alpha_\text{logo}(1-m)$. Where a player is present the
+effective alpha drops to zero and the original frame pixel remains on top; the
+player is never cut out and pasted back. Compositing runs only inside a box
+around the logo footprint. The representative frame for each clip is the one
+where $m$ overlaps the logo most (Fig.~\ref{fig:bonus}), and
+\path{match005_occlusion_aware.mp4} holds all 250 composited frames.
+
+\begin{figure}[p]\centering
+\begin{subfigure}{0.49\linewidth}\includegraphics[width=\linewidth]{match001_representative.png}
+\caption{match001, frame 500.}\end{subfigure}\hfill
+\begin{subfigure}{0.49\linewidth}\includegraphics[width=\linewidth]{match005_representative.png}
+\caption{match005, frame 3.}\end{subfigure}\\[4pt]
+\begin{subfigure}{0.49\linewidth}\includegraphics[width=\linewidth]{match028_representative.png}
+\caption{match028, frame 131.}\end{subfigure}\hfill
+\begin{subfigure}{0.49\linewidth}\includegraphics[width=\linewidth]{match091_representative.png}
+\caption{match091, frame 356.}\end{subfigure}\\[4pt]
+\begin{subfigure}{0.49\linewidth}\includegraphics[width=\linewidth]{match125_representative.png}
+\caption{match125, frame 578.}\end{subfigure}\hfill
+\begin{subfigure}{0.49\linewidth}\includegraphics[width=\linewidth]{match005_mask_crop.png}
+\caption{Soft mask for the match005 frame, logo region.}\end{subfigure}
+\caption{Occlusion-aware insertion: the player stays in front of the logo in every clip.}\label{fig:bonus}
+\end{figure}
 
 \section*{AI-use declaration}
 Check one statement.
 
 \begin{itemize}
   \item[$\square$] I did not use generative AI for this homework.
-  \item[$\square$] I did not use generative AI for any required part. I used it only in the optional bonus marked ``Gen-AI leverage allowed.'' Tool/model, purpose, and affected files: \underline{\hspace{1.4in}}
+  \item[$\boxtimes$] I did not use generative AI for any required part. I used it only in the optional bonus marked ``Gen-AI leverage allowed.'' Tool/model, purpose, and affected files: Claude (Anthropic), used to design and write the bonus compositor; affected files are \path{bonus_tennis_video.py} and the generated \path{outputs/bonus/} only.
 \end{itemize}
 
 I confirm that generative AI did not write or complete my required code,
