@@ -25,8 +25,37 @@ def estimate_fundamental_matrix(matches: np.ndarray) -> np.ndarray:
       4. enforce rank two by zeroing the smallest singular value; and
       5. denormalize and choose a stable scale.
     """
-    del matches
-    return np.array([[0.0, 0.0, 0.0], [0.0, 0.0, -1.0], [0.0, 1.0, 0.0]])
+    centroid_x1 = matches[:, 0:2].mean(axis=0)
+    centroid_x2 = matches[:, 2:4].mean(axis=0)
+    N = len(matches)
+
+    s_x1 = np.sqrt(2) / np.linalg.norm(matches[:, 0:2] - centroid_x1, axis=1).mean()
+    s_x2 = np.sqrt(2) / np.linalg.norm(matches[:, 2:4] - centroid_x2, axis=1).mean()
+    T_x1 = np.array([[s_x1, 0, -s_x1 * centroid_x1[0]], [0, s_x1, -s_x1 * centroid_x1[1]], [0, 0, 1]])
+    T_x2 = np.array([[s_x2, 0, -s_x2 * centroid_x2[0]], [0, s_x2, -s_x2 * centroid_x2[1]], [0, 0, 1]])
+
+    hom_x1 = np.hstack([matches[:, 0:2], np.ones((N, 1))])
+    hom_x2 = np.hstack([matches[:, 2:4], np.ones((N, 1))])
+
+    normalized_x1 = (T_x1 @ hom_x1.T).T
+    normalized_x2 = (T_x2 @ hom_x2.T).T
+
+    A = np.zeros((N, 9))
+    for i in range(N):
+        u1, v1 = normalized_x1[i, 0], normalized_x1[i, 1]
+        u2, v2 = normalized_x2[i, 0], normalized_x2[i, 1]
+        A[i] = [u2*u1, u2*v1, u2, v2*u1, v2*v1, v2, u1, v1, 1]
+
+    U, S, Vt = np.linalg.svd(A)
+    F = Vt[-1].reshape(3, 3)
+    
+    U_f, S_f, Vt_f = np.linalg.svd(F)
+    S_f[-1] = 0
+
+    F = U_f @ np.diag(S_f) @ Vt_f
+
+    F_final = T_x2.T @ F @ T_x1
+    return F_final / np.linalg.norm(F_final)
 
 
 # ------------------- DO NOT MODIFY CODE OUTSIDE THE BLOCK --------------------
