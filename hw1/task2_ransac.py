@@ -42,8 +42,39 @@ def ransac_rigid(
     Keep the first hypothesis on ties; return identity/all-false if none has
     three inliers. Recompute the final mask after refitting (residual <= threshold).
     """
-    del target, threshold, max_trials, rng
-    return np.eye(4), np.zeros(source.shape[1], dtype=bool)
+    count = source.shape[1]
+    if count < 3:
+        return np.eye(4), np.zeros(count, dtype=bool)
+
+    best_count = 0
+    best_inliers = None
+    for _ in range(max_trials):
+        sample = rng.choice(count, 3, replace=False)
+        src3 = source[:3, sample]
+        tgt3 = target[:3, sample]
+
+        src_cross = np.cross(src3[:, 1] - src3[:, 0], src3[:, 2] - src3[:, 0])
+        tgt_cross = np.cross(tgt3[:, 1] - tgt3[:, 0], tgt3[:, 2] - tgt3[:, 0])
+        if np.linalg.norm(src_cross) < 1e-8 or np.linalg.norm(tgt_cross) < 1e-8:
+            continue
+
+        hypothesis = fit_rigid_svd(source[:, sample], target[:, sample])
+        moved = hypothesis @ source
+        residuals = np.linalg.norm(moved[:3] - target[:3], axis=0)
+        inliers = residuals <= threshold
+        inlier_count = int(inliers.sum())
+        if inlier_count > best_count:
+            best_count = inlier_count
+            best_inliers = inliers
+
+    if best_count < 3:
+        return np.eye(4), np.zeros(count, dtype=bool)
+
+    refined = fit_rigid_svd(source[:, best_inliers], target[:, best_inliers])
+    moved = refined @ source
+    residuals = np.linalg.norm(moved[:3] - target[:3], axis=0)
+    final_mask = residuals <= threshold
+    return refined, final_mask
 
 
 # ------------------- DO NOT MODIFY CODE OUTSIDE THE BLOCK --------------------

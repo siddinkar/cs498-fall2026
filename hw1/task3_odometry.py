@@ -50,8 +50,36 @@ def icp(
     without re-matching, then compare absolute change with the previous value.
     The transform trace begins with identity and includes every update.
     """
-    del target, max_iterations, max_correspondence_distance, trim_fraction, tolerance
-    return np.eye(4), np.empty(0), np.eye(4)[None]
+    transform = np.eye(4)
+    trace = [transform.copy()]
+    history = []
+
+    for _ in range(max_iterations):
+        moved = transform @ source
+        source_ids, target_ids, distances = nearest_correspondences(
+            moved, target, max_correspondence_distance
+        )
+        accepted = len(source_ids)
+        if accepted < 3:
+            break
+
+        retain = max(3, int(np.ceil(trim_fraction * accepted)))
+        order = np.argsort(distances)[:retain]
+        kept_source = source_ids[order]
+        kept_target = target_ids[order]
+
+        delta = fit_rigid_svd(moved[:, kept_source], target[:, kept_target])
+        transform = delta @ transform
+        trace.append(transform.copy())
+
+        updated = transform @ source[:, kept_source]
+        residuals = np.linalg.norm(updated[:3] - target[:3, kept_target], axis=0)
+        history.append(float(np.sqrt(np.mean(residuals**2))))
+
+        if len(history) >= 2 and abs(history[-1] - history[-2]) < tolerance:
+            break
+
+    return transform, np.asarray(history), np.stack(trace)
 
 
 def chain_relative_poses(relative_transforms: np.ndarray) -> np.ndarray:
@@ -60,7 +88,10 @@ def chain_relative_poses(relative_transforms: np.ndarray) -> np.ndarray:
     Use T_(L_i+1 -> W) = T_(L_i -> W) @ T_(L_i+1 -> L_i).
     Do not add pose components.
     """
-    return np.repeat(np.eye(4)[None], len(relative_transforms) + 1, axis=0)
+    poses = [np.eye(4)]
+    for relative in relative_transforms:
+        poses.append(poses[-1] @ relative)
+    return np.stack(poses)
 
 
 def relative_trajectory_error(
@@ -74,9 +105,21 @@ def relative_trajectory_error(
     T_(L_i+delta -> W) for the estimate and reference, then measure the error
     transform using the equations in the handout.
     """
-    del ground_truth_poses
-    count = max(len(estimated_poses) - delta, 0)
-    return np.zeros(count), np.zeros(count)
+    count = len(estimated_poses) - delta
+    if count <= 0:
+        return np.zeros(0), np.zeros(0)
+
+    est_first, est_second = estimated_poses[:count], estimated_poses[delta:delta + count]
+    gt_first, gt_second = ground_truth_poses[:count], ground_truth_poses[delta:delta + count]
+
+    est_motion = np.linalg.inv(est_first) @ est_second
+    gt_motion = np.linalg.inv(gt_first) @ gt_second
+    error = np.linalg.inv(gt_motion) @ est_motion
+
+    translation = np.linalg.norm(error[:, :3, 3], axis=1)
+    trace_r = np.trace(error[:, :3, :3], axis1=1, axis2=2)
+    rotation = np.degrees(np.arccos(np.clip((trace_r - 1.0) / 2.0, -1.0, 1.0)))
+    return translation, rotation
 
 
 # ------------------- DO NOT MODIFY CODE OUTSIDE THE BLOCK --------------------

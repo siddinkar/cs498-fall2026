@@ -34,8 +34,26 @@ def fit_rigid_svd(source: np.ndarray, target: np.ndarray) -> np.ndarray:
     ``source`` and ``target`` are homogeneous [4, N] point matrices. Lecture
     notation is used directly: P_target = T_source_to_target @ P_source.
     """
-    del target
-    return np.eye(4)
+    P = source[:3, :]
+    p_bar = np.mean(P, axis=1, keepdims=True)
+    
+    Q = target[:3, :]
+    q_bar = np.mean(Q, axis=1, keepdims=True)
+
+    Pc = P - p_bar
+    Qc = Q - q_bar
+
+    H = Pc @ Qc.T
+    U, S, Vt = np.linalg.svd(H)
+
+    # Determinant normalization
+    det = np.linalg.det(Vt.T @ U.T)
+    D = np.diag([1, 1, det])
+    R = Vt.T @ D @ U.T
+    t = q_bar - R @ p_bar
+
+    return np.vstack((np.hstack((R, t)), [0, 0, 0, 1]))
+
 
 
 def nearest_correspondences(
@@ -48,12 +66,19 @@ def nearest_correspondences(
     Transpose xyz to [N, 3] only for the SciPy cKDTree boundary, query one
     neighbor per source column, and retain distances <= ``max_distance``.
     """
-    count = min(source.shape[1], target.shape[1])
-    source_ids = np.arange(count)
-    target_ids = np.arange(count)
-    distances = np.linalg.norm(source[:3, :count] - target[:3, :count], axis=0)
+    source_xyz = source[:3].T
+    target_xyz = target[:3].T
+
+    if source_xyz.shape[0] == 0 or target_xyz.shape[0] == 0:
+        empty_ids = np.empty(0, dtype=np.int64)
+        return empty_ids, empty_ids, np.empty(0, dtype=np.float64)
+
+    tree = cKDTree(target_xyz)
+    distances, target_ids = tree.query(source_xyz, k=1)
+
     keep = distances <= max_distance
-    return source_ids[keep], target_ids[keep], distances[keep]
+    source_ids = np.arange(source_xyz.shape[0])[keep]
+    return source_ids, target_ids[keep], distances[keep]
 
 
 # ------------------- DO NOT MODIFY CODE OUTSIDE THE BLOCK --------------------
