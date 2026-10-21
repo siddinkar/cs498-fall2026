@@ -1,0 +1,192 @@
+\documentclass[11pt]{article}
+\usepackage[margin=0.85in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,booktabs,graphicx,xurl,hyperref}
+\graphicspath{{outputs/task1/}{outputs/task2/}{outputs/task3/}{outputs/bonus/}}
+\hypersetup{pdftitle={CS 498 HW2 Report},pdfauthor={Siddharth Dinkar}}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.9}
+\renewcommand{\textfraction}{0.05}
+\renewcommand{\floatpagefraction}{0.85}
+\setcounter{topnumber}{3}
+\setcounter{totalnumber}{5}
+
+\title{CS 498 HW2 Report\\Point Cloud Part Segmentation}
+\author{Siddharth Dinkar (sdinkar2)}
+\date{Fall 2026}
+
+\begin{document}
+\maketitle
+
+\section{Evaluation protocol}
+
+The training split fit every model parameter. Validation mean IoU made every other decision, including the augmentation ranges and the saved checkpoint, which is the epoch with the highest validation mean IoU. The test split was evaluated exactly once per required model with the \texttt{-{}-test} flag after both checkpoints were frozen, and nothing was retrained or tuned after those two runs. All figures and failure cases use validation chairs.
+
+\section{Data, augmentation, and metrics}
+
+Each chair is 2{,}048 surface points with XYZ in $[-1,1]$, RGB albedo in $[0,1]$, and one of five labels per point. Both models take XYZ and RGB, with XYZ recentered and scaled into a unit sphere at training and evaluation time.
+
+Augmentation applies to training XYZ only: a rotation about the vertical $z$ axis with angle uniform in $[0, 2\pi)$, an isotropic scale uniform in $[0.9, 1.1]$, and Gaussian jitter with standard deviation 0.01 clipped to $\pm 0.05$ per coordinate. Labels and colors stay aligned because every point moves under the same rigid transform plus a small per-point offset, so point $i$ still carries label $i$ and color $i$. Validation and test chairs are never rotated.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.48\linewidth,trim=0 70 0 0,clip]{augmentation.png}\hfill
+\includegraphics[width=0.48\linewidth]{class_frequency.png}
+\caption{Left: training chair 0 before and after augmentation with seed 498. The purple slab is labeled other. Right: fraction of training points per class.}
+\label{fig:aug}
+\end{figure}
+
+The confusion matrix has ground truth on rows and predictions on columns, and every valid point contributes exactly once. For class $c$ with diagonal entry $\mathrm{TP}_c$, row sum $\mathrm{TP}_c + \mathrm{FN}_c$, and column sum $\mathrm{TP}_c + \mathrm{FP}_c$,
+\[
+\mathrm{IoU}_c = \frac{\mathrm{TP}_c}{\mathrm{TP}_c + \mathrm{FP}_c + \mathrm{FN}_c}.
+\]
+A class absent from both prediction and target is recorded as NaN and excluded from the mean, and mean IoU is the plain average over the remaining classes.
+
+\section{PointNet baseline}
+
+The $[B,N,6]$ input is transposed to $[B,6,N]$ so that \texttt{Conv1d} with 1x1 kernel size applies the same linear map to every point. Three of these layers with batch normalization and ReLU map $6 \to 64 \to 128 \to 256$ and give local features $[B,256,N]$. The maximum over $N$ points gives the global feature $[B,256,1]$ which is repeated to every point and concatenated with the local features to give $[B,512,N]$. Two more convolutions, $512 \to 128$ with batch normalization, ReLU and dropout 0.2, then $128 \to 5$, produce $[B,5,N]$, transposed to $[B,N,5]$ raw logits.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.75\linewidth]{outputs/task2/training_curves.png}
+\caption{PointNet training and validation cross entropy and validation mean IoU over 100 epochs.}
+\label{fig:pncurves}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth,trim=0 55 0 0,clip]{outputs/task2/predictions.png}
+\caption{PointNet predictions on validation chairs 0 and 7 next to ground truth.}
+\label{fig:pnpred}
+\end{figure}
+
+Table~\ref{tab:cmp} reports the PointNet metrics. In Figure~\ref{fig:pncurves} the training loss is still falling at epoch 100 and the validation loss tracks it with a steady gap of about 0.07, and the best checkpoint is epoch 97. That is mild underfitting rather than overfitting: the model has few parameters and only one global summary, so more epochs would likely still help.
+
+The clearest failure is with the armrests. On chair 7 in Figure~\ref{fig:pnpred} PointNet labels almost all armrest points as seat. A single global maximum tells each point that the chair has arms somewhere, but a seat point and an armrest point at nearly the same height and color look alike to the classifier.
+
+\section{Transformer}
+
+Each point is embedded as $Z_0 = W_{\mathrm{in}}[\mathrm{XYZ}, \mathrm{RGB}] + \mathrm{MLP}_{\mathrm{pos}}(\mathrm{XYZ})$ of width 96, then passes through 4 pre-LN blocks of multi-head self-attention and a MLP $96 \to 384 \to 96$, each with a residual connection, and a head of layer normalization and a linear map $96 \to 5$.
+
+A linear layer $96 \to 288$ gives a $[B,N,288]$ tensor. Reshaping it to $[B,N,3,4,24]$ and permuting gives $Q$, $K$ and $V$, each of shape $[B,4,N,24]$. For each head, $\mathrm{softmax}(QK^\top / \sqrt{24})\,V$ lets every point weight every other point by the match between its query and the other point's key and gather that point's value. The heads merge back to $[B,N,96]$ and pass through a $96 \to 96$ projection. Unlike PointNet's one maximum shared by every point, each point reads its own learned combination of the other points.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.75\linewidth]{outputs/task3/training_curves.png}
+\caption{Transformer training and validation cross entropy and validation mean IoU over 100 epochs.}
+\label{fig:tfcurves}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth,trim=0 55 0 0,clip]{outputs/task3/model_comparison.png}
+\caption{Validation chairs 7 and 12 with input RGB, ground truth, the PointNet prediction, and the Transformer prediction.}
+\label{fig:cmp}
+\end{figure}
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{lrrrr}
+\toprule
+ & \multicolumn{2}{c}{PointNet} & \multicolumn{2}{c}{Transformer} \\
+ & Val & Test & Val & Test \\
+\midrule
+Mean IoU & 0.716 & 0.714 & 0.737 & 0.735 \\
+Point accuracy & 0.853 & 0.858 & 0.867 & 0.871 \\
+IoU seat & 0.767 & 0.774 & 0.786 & 0.789 \\
+IoU backrest & 0.778 & 0.792 & 0.798 & 0.806 \\
+IoU armrest & 0.515 & 0.519 & 0.571 & 0.565 \\
+IoU base & 0.769 & 0.787 & 0.780 & 0.804 \\
+IoU other & 0.750 & 0.697 & 0.747 & 0.713 \\
+\midrule
+Validation loss at best epoch & \multicolumn{2}{c}{0.464} & \multicolumn{2}{c}{0.442} \\
+Best epoch of 100 & \multicolumn{2}{c}{97} & \multicolumn{2}{c}{68} \\
+Parameters & \multicolumn{2}{c}{109{,}253} & \multicolumn{2}{c}{458{,}405} \\
+Training time on one A10 & \multicolumn{2}{c}{133 s} & \multicolumn{2}{c}{572 s} \\
+\bottomrule
+\end{tabular}
+\caption{Both required models under the same data, loss weights, and evaluation code. Each test column is the single final evaluation of the validation-selected checkpoint.}
+\label{tab:cmp}
+\end{table}
+
+PointNet's losses fall together through epoch 100. The Transformer's validation loss bottoms out near 0.43 around epoch 40 to 50 and drifts up to 0.50 by epoch 100 while its training loss keeps falling to 0.22. This signals overfitting. On both splits the Transformer leads, and test tracks validation within half a point.. The largest gain is armrest, up about 5 IoU points. In Figure~\ref{fig:cmp} PointNet erases both armrests of chair 7 into the seat while the Transformer recovers them. On chair 12 PointNet leaves a stray green patch on the backrest frame and a blue stripe on the base stretcher that the Transformer gets right. Attention can compare an armrest point with the backrest behind it and the seat below it, which one global summary cannot.
+
+The cost is that full self-attention compares every pair of points, so each head forms a $2{,}048 \times 2{,}048$ score matrix per block and compute grows with $N^2$. That is 572 seconds against 133 seconds for PointNet on the same GPU, and doubling the point count would roughly quadruple it. One visible Transformer error is on chair 7 in Figure~\ref{fig:cmp}, where a green blob runs from the right armrest across the seat edge into the base.
+
+\section{Limitations and improvements}
+
+Annotation quality limits the other class. Training chair 0 in Figure~\ref{fig:aug} sits on a flat slab labeled other, so the most of its points belong to a class that elsewhere means headrests or footrests. Other is the one class where the Transformer does not beat PointNet, and both models drop about 5 IoU points on it from validation to test.
+
+Part imbalance and sampling limit the armrest recognization. It is a small proportion of training points and stays the lowest IoU for both models. With 2{,}048 points an arm support is a few dozen points wide, so there is little margin between it and the seat edge it touches.
+
+A concrete next experiment is to restrict attention in the first two blocks to the 32 nearest neighbors of each point in normalized XYZ. This keeps the pairwise reasoning that helped armrest, cuts the $N^2$ cost, and adds a locality prior against streaks across part boundaries. Comparing armrest and base IoU against the current model on the same split would show whether the gain is local or global.
+
+\section*{Optional Utonia linear-probe bonus}
+
+The frozen encoder is the official checkpoint \texttt{utonia.pth} at revision \texttt{9457f025} of the Hugging Face repository \texttt{Pointcept/Utonia}, loaded with the official \texttt{load} function from the source repository at commit \texttt{de1f9dee}. It is a 137.3M parameter Point Transformer V3, kept in evaluation mode with every parameter frozen.
+
+Preprocessing follows the official object pipeline. Each chair is scaled into a unit sphere, shifted so $z_{\min} = 0$, and voxelized with \texttt{GridSample} at 0.01, and the encoder input is XYZ, RGB, and the supplied normals. The output is upcast through all four pooling levels by concatenating coarser features onto finer ones, giving 1{,}386 channels, and the stored inverse index maps each of the 2{,}048 points back to its voxel. Features for all training and validation chairs are extracted once without augmentation and cached as float16.
+
+The head is one \texttt{nn.Linear(1386, 5)} applied per point, 6{,}935 trainable parameters. Each feature dimension is first standardized by fixed training-set mean and standard deviation buffers, which are not trained. The head uses the same class-weighted loss, metrics, and best-mIoU checkpoint rule as the required models, with AdamW at learning rate $10^{-3}$ and weight decay $10^{-4}$ for 30 epochs.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth,trim=0 40 0 0,clip]{outputs/bonus/feature_pca.png}
+\caption{Validation chairs 0 and 7: input RGB, the first three principal components of the frozen Utonia features as RGB from \texttt{torch.pca\_lowrank} fit jointly on both chairs and rescaled to $[0,1]$, ground truth, and the linear-probe prediction.}
+\label{fig:pca}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.75\linewidth]{outputs/bonus/training_curves.png}
+\caption{Linear-probe training and validation cross entropy and validation mean IoU over 30 epochs.}
+\label{fig:bonuscurves}
+\end{figure}
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{lrrr}
+\toprule
+ & PointNet & Transformer & Utonia probe \\
+\midrule
+Validation mean IoU & 0.716 & 0.737 & 0.762 \\
+Validation point accuracy & 0.853 & 0.867 & 0.886 \\
+Validation loss at best epoch & 0.464 & 0.442 & 0.364 \\
+IoU seat & 0.767 & 0.786 & 0.829 \\
+IoU backrest & 0.778 & 0.798 & 0.823 \\
+IoU armrest & 0.515 & 0.571 & 0.628 \\
+IoU base & 0.769 & 0.780 & 0.806 \\
+IoU other & 0.750 & 0.747 & 0.724 \\
+Best epoch & 97 & 68 & 8 \\
+Trainable parameters & 109{,}253 & 458{,}405 & 6{,}935 \\
+Training time & 133 s & 572 s & 173 s \\
+\bottomrule
+\end{tabular}
+\caption{Validation metrics for the two required models and the linear probe, which was not evaluated on test.}
+\label{tab:bonus}
+\end{table}
+
+The frozen features beat both scratch models by 2.5 and 4.6 mean IoU points with 66 times fewer trainable parameters than the Transformer, and the probe is at 0.752 after one epoch, so the curve in Figure~\ref{fig:bonuscurves} is flat from the start. The gain is largest on armrest. The one class where it is worse is other, a label defined by the annotation hierarchy rather than shape, which a general-purpose encoder has no reason to separate.
+
+In Figure~\ref{fig:pca} the PCA colors separate the parts of the office chair before any label is used: the backrest is dark red, the seat yellow green, the armrests olive, and the base pink, and the color changes at part boundaries rather than with the flat input RGB. On the second chair the backrest is dark blue and the seat and legs share green, so the leading components spend their variance on backrest versus the rest. The PCA is fit jointly on both chairs and component signs are arbitrary, so the colors show feature structure rather than labels, but they show that the parts occupy different directions in the 1{,}386 channels, which is all a linear layer needs.
+
+The probe prediction on chair 0 in the last column of Figure~\ref{fig:pca} is close to the ground truth, including the small purple other patch on the seat that both scratch models miss. On chair 7 it recovers both armrests, and its visible error is at the seat edge, where a few base points along the front stretcher and the right arm support are labeled seat.
+
+\section*{AI-use declaration}
+Check one statement.
+
+\begin{itemize}
+  \item[$\square$] I did not use generative AI for this homework.
+  \item[$\boxtimes$] I did not use generative AI for any required part. I used it
+  only in the optional bonus marked ``Gen-AI leverage allowed''. Tool/model,
+  purpose, and affected files: Claude (Anthropic), used to design and write the
+  frozen linear-probe script; affected files are \path{bonus_utonia.py} and the
+  generated \path{outputs/bonus/} only.
+\end{itemize}
+
+I confirm that generative AI did not write or complete my required code,
+derive my required answers, generate my analysis, or write my required report.
+
+\end{document}
