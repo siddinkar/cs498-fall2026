@@ -17,3 +17,5 @@ venv/
 
 # Submission archives
 *.zip
+.venv-utonia/
+Utonia/

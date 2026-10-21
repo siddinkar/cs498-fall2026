@@ -25,7 +25,8 @@ if [ ! -d "$UTONIA_SRC" ]; then
   git clone https://github.com/Pointcept/Utonia.git "$UTONIA_SRC"
 fi
 git -C "$UTONIA_SRC" checkout "$UTONIA_COMMIT"
-pip install "$UTONIA_SRC"
+# setup.py needs pkg_resources, which new setuptools dropped; a .pth file puts the package on the path instead.
+echo "$UTONIA_SRC" > "$VENV/lib/python3.11/site-packages/utonia_src.pth"
 
 # Pre-download the pinned checkpoint.
 python - <<PY
