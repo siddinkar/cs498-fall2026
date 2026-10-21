@@ -18,7 +18,7 @@ python -m pip install --upgrade pip
 pip install "numpy<2" torch==2.5.0 torchvision==0.20.0 --index-url https://download.pytorch.org/whl/cu124
 pip install spconv-cu124
 pip install torch-scatter -f https://data.pyg.org/whl/torch-2.5.0+cu124.html
-pip install huggingface_hub timm addict packaging matplotlib einops
+pip install huggingface_hub timm addict packaging matplotlib einops scipy
 
 # Official source at the pinned commit (FlashAttention is skipped; the script falls back automatically).
 if [ ! -d "$UTONIA_SRC" ]; then
