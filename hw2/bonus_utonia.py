@@ -111,7 +111,8 @@ def load_utonia(args, device):
     provenance = {
         "repo_id": UTONIA_REPO_ID,
         "model_name": args.model,
-        "hf_revision": args.hf_revision if not args.checkpoint else "local file",
+        "hf_revision": args.hf_revision,
+        "checkpoint_source": "local path (pre-downloaded)" if args.checkpoint else "hf_hub_download",
         "checkpoint_file": str(checkpoint_path),
         "checkpoint_sha256": sha256,
         "source_repository": "https://github.com/Pointcept/Utonia",
