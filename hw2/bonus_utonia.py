@@ -107,7 +107,7 @@ def load_utonia(args, device):
 
     sha256 = hashlib.sha256(checkpoint_path.read_bytes()).hexdigest()
     checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=True)
-    config = json.loads(json.dumps(checkpoint["config"], default=str))
+    config = json.loads(json.dumps(dict(checkpoint["config"], **(custom_config or {})), default=str))
     provenance = {
         "repo_id": UTONIA_REPO_ID,
         "model_name": args.model,
@@ -271,7 +271,7 @@ class FeatureDataset(Dataset):
 
     def __getitem__(self, index):
         return (
-            torch.from_numpy(np.ascontiguousarray(self.features[index])),
+            torch.from_numpy(np.array(self.features[index])),
             torch.from_numpy(self.labels[index]),
         )
 
@@ -417,8 +417,8 @@ def main():
     if device.type == "cuda":
         torch.cuda.empty_cache()
     if args.in_memory:
-        train_features = np.asarray(train_features)
-        val_features = np.asarray(val_features)
+        train_features = np.array(train_features)
+        val_features = np.array(val_features)
 
     # Linear probe: same class weights and optimizer family as the required tasks.
     counts = np.bincount(train["labels"].reshape(-1), minlength=len(PART_NAMES))
