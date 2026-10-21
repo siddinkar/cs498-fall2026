@@ -47,7 +47,19 @@ class SelfAttention(nn.Module):
         https://arxiv.org/abs/1706.03762.
         """
         # ----------- SelfAttention.forward: INSERT YOUR CODE BELOW -----------
-        return torch.zeros_like(features)
+        batch, points, width = features.shape
+
+        # Packed (B,N,3W) -> [Q | K | V] with heads exposed: (3,B,H,N,d).
+        qkv = self.qkv(features).reshape(batch, points, 3, self.num_heads, self.head_width)
+        query, key, value = qkv.permute(2, 0, 3, 1, 4)
+
+        # softmax(QK^T / sqrt(d)) V per head; dropout only while training.
+        attended = F.scaled_dot_product_attention(
+            query, key, value, dropout_p=self.dropout if self.training else 0.0
+        )
+
+        merged = attended.transpose(1, 2).reshape(batch, points, width)
+        return self.output(merged)
         # ------------ DO NOT MODIFY CODE OUTSIDE THIS BLOCK --------------
 
 
@@ -96,8 +108,13 @@ class TransformerSegmenter(nn.Module):
         Preserve point order and return raw logits, not probabilities.
         """
         # ------- TransformerSegmenter.forward: INSERT YOUR CODE BELOW -------
-        empty = xyz.new_zeros((*xyz.shape[:2], self.width))
-        return self.head(empty)
+        features = self.input_projection(torch.cat([xyz, rgb.to(xyz.dtype)], dim=-1))
+        features = features + self.position_mlp(xyz)
+
+        for block in self.blocks:
+            features = block(features)
+
+        return self.head(features)
         # ------------ DO NOT MODIFY CODE OUTSIDE THIS BLOCK --------------
 
 
@@ -114,7 +131,9 @@ def segmentation_loss(logits, labels, class_weights):
     Flatten only the batch and point axes before calling F.cross_entropy.
     """
     # ------------ segmentation_loss: INSERT YOUR CODE BELOW ------------
-    return F.cross_entropy(logits.flatten(0, 1), labels.flatten())
+    return F.cross_entropy(
+        logits.flatten(0, 1), labels.flatten().long(), weight=class_weights, reduction="mean"
+    )
     # ------------ DO NOT MODIFY CODE OUTSIDE THIS BLOCK --------------
 
 

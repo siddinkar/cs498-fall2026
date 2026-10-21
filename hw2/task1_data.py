@@ -19,7 +19,20 @@ from hw2_utils import PART_NAMES, load_split, plot_point_clouds, write_json
 def augment_points(points, rng):
     """Apply a random z rotation, scale change, and coordinate noise."""
     # ---------------- Task 1B: INSERT YOUR CODE BELOW ----------------
-    return points.copy()
+    points = np.asarray(points)
+    out_dtype = points.dtype if np.issubdtype(points.dtype, np.floating) else np.float32
+
+    # Random rotation about z axis.
+    angle = rng.uniform(0.0, 2.0 * np.pi)
+    cos, sin = np.cos(angle), np.sin(angle)
+    rotation = np.array([[cos, -sin, 0.0], [sin, cos, 0.0], [0.0, 0.0, 1.0]])
+
+    # Small isotropic scale in [0.9, 1.1] and clipped Gaussian jitter.
+    scale = rng.uniform(0.9, 1.1)
+    jitter = np.clip(rng.normal(0.0, 0.01, size=points.shape), -0.05, 0.05)
+
+    augmented = (points.astype(np.float64) @ rotation.T) * scale + jitter
+    return augmented.astype(out_dtype)
     # ------------ DO NOT MODIFY CODE OUTSIDE THIS BLOCK --------------
 
 
@@ -31,7 +44,16 @@ def augment_points(points, rng):
 def compute_confusion_matrix(prediction, target, num_classes):
     """Return a matrix with ground-truth rows and prediction columns."""
     # ---------------- Task 1C: INSERT YOUR CODE BELOW ----------------
-    return np.zeros((num_classes, num_classes), dtype=np.int64)
+    prediction = np.asarray(prediction).reshape(-1).astype(np.int64)
+    target = np.asarray(target).reshape(-1).astype(np.int64)
+    if prediction.shape != target.shape:
+        raise ValueError("prediction and target must contain the same number of points")
+
+    # Count each pair once; rows are ground truth.
+    valid = (target >= 0) & (target < num_classes) & (prediction >= 0) & (prediction < num_classes)
+    joint_index = target[valid] * num_classes + prediction[valid]
+    counts = np.bincount(joint_index, minlength=num_classes * num_classes)
+    return counts.reshape(num_classes, num_classes).astype(np.int64)
     # ------------ DO NOT MODIFY CODE OUTSIDE THIS BLOCK --------------
 
 
@@ -43,7 +65,14 @@ def compute_confusion_matrix(prediction, target, num_classes):
 def iou_from_confusion(confusion):
     """Return one IoU per class; use NaN when the union is zero."""
     # ---------------- Task 1C: INSERT YOUR CODE BELOW ----------------
-    return np.zeros(len(confusion), dtype=np.float64)
+    confusion = np.asarray(confusion, dtype=np.float64)
+    true_positive = np.diag(confusion)
+    union = confusion.sum(axis=1) + confusion.sum(axis=0) - true_positive  # TP + FN + FP
+
+    # NaN where the class is absent from both prediction and target.
+    iou = np.full(len(confusion), np.nan, dtype=np.float64)
+    np.divide(true_positive, union, out=iou, where=union > 0)
+    return iou
     # ------------ DO NOT MODIFY CODE OUTSIDE THIS BLOCK --------------
 
 

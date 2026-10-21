@@ -51,9 +51,15 @@ class PointNetSegmenter(nn.Module):
         https://arxiv.org/abs/1612.00593.
         """
         # ---------------- Task 2: INSERT YOUR CODE BELOW -----------------
-        batch, points, _ = xyz.shape
-        empty = xyz.new_zeros((batch, 512, points))
-        return self.classifier(empty).transpose(1, 2)
+        features = torch.cat([xyz, rgb.to(xyz.dtype)], dim=-1).transpose(1, 2) # (B,N,6) -> (B,6,N)
+        local_features = self.point_mlp(features)  # (B,256,N)
+
+        # Symmetric max over points, then broadcast the global feature to every point.
+        global_feature = local_features.amax(dim=2, keepdim=True)
+        global_feature = global_feature.expand(-1, -1, local_features.shape[2])
+
+        combined = torch.cat([local_features, global_feature], dim=1)  # (B,512,N)
+        return self.classifier(combined).transpose(1, 2)
         # ------------- DO NOT MODIFY CODE OUTSIDE THIS BLOCK -------------
 
 
