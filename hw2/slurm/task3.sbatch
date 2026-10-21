@@ -12,4 +12,4 @@ unset PYTHONPATH
 cd /scratch/sdinkar2/cs498-fall2026/hw2
 
 python -c "import torch; print(torch.__version__, 'CUDA:', torch.cuda.is_available())"
-python -u task3_transformer.py
+python -u task3_transformer.py "$@"
