@@ -1,0 +1,215 @@
+\documentclass[11pt]{article}
+\usepackage[margin=0.85in]{geometry}
+\usepackage{amsmath,booktabs,graphicx,hyperref}
+\hypersetup{pdftitle={CS 498 Machine Perception HW1},pdfauthor={Siddharth Dinkar}}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.9}
+\renewcommand{\textfraction}{0.05}
+\renewcommand{\floatpagefraction}{0.85}
+\setcounter{topnumber}{3}
+\setcounter{totalnumber}{5}
+
+\title{CS 498 Machine Perception HW1}
+\author{Siddharth Dinkar}
+\date{Fall 2026}
+
+\begin{document}
+\maketitle
+
+\section{Rigid fitting and RANSAC}
+
+Points are homogeneous $4 \times N$ matrices and transforms follow $\tilde P_B = T_{A \to B} \tilde P_A$. The rigid fit is the SVD solution on centered points with the determinant correction, and correspondences come from a cKDTree on the target with an inclusive distance threshold.
+
+\subsection*{SVD fit on the 1{,}000 supplied pairs}
+
+The fit uses the 1{,}000 known pairs and is then applied to the full source fragment. Table~\ref{tab:svd} lists the Checkpoint 1A errors against the reference transform and the Checkpoint 1B correspondence metrics at a 5 cm threshold.
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{lr}
+\toprule
+Translation error & 4.7 mm \\
+Rotation error & 0.043$^\circ$ \\
+Known pairs used for the fit & 1{,}000 \\
+Source points with a target neighbor within 5 cm & 4{,}649 of 7{,}100 \\
+Inlier ratio & 0.655 \\
+Inlier RMSE & 17.3 mm \\
+\bottomrule
+\end{tabular}
+\caption{Checkpoint 1A and 1B metrics from \texttt{outputs/task1/svd\_metrics.json}.}
+\label{tab:svd}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.6\linewidth]{outputs/task1/svd_alignment.png}
+\caption{Source and target fragments before and after the SVD transform, rendered as Open3D surfels from a fixed camera.}
+\label{fig:svd}
+\end{figure}
+
+The inlier RMSE alone does not describe the fit, since it is computed only over the 65 percent of source points that found a neighbor within 5 cm. A transform that aligned a small patch and left the rest unmatched would still score a small RMSE. The inlier ratio says how much of the source the transform explains. Here the unmatched 35 percent is mostly geometry that only one fragment observed, which fits the low translation and rotation errors.
+
+\subsection*{RANSAC on corrupted pairs}
+
+The pipeline replaces 35 percent of the pairs with random target points and compares an all-pairs SVD fit against RANSAC with a 2.5 cm threshold and 500 trials. Each trial fits three non-collinear pairs, the largest consensus set wins, and the final transform is refit once from all of its inliers.
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{lr}
+\toprule
+Inliers retained & 650 of 1{,}000 \\
+Inlier ratio & 0.650 \\
+Inlier RMSE & 13.4 mm \\
+Rotation error, all-pairs SVD & 1.521$^\circ$ \\
+Rotation error, RANSAC & 0.034$^\circ$ \\
+Translation error, RANSAC & 4.5 mm \\
+\bottomrule
+\end{tabular}
+\caption{Checkpoint 2 metrics from \texttt{outputs/task2/ransac\_metrics.json}.}
+\label{tab:ransac}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.8\linewidth]{outputs/task2/ransac_alignment.png}
+\caption{Residuals after the RANSAC transform, split at the 2.5 cm threshold into the retained consensus set and the rejected pairs.}
+\label{fig:ransac}
+\end{figure}
+
+RANSAC recovered exactly the 650 uncorrupted pairs and rejected all 350 corrupted ones. Its rotation error is about 45 times smaller than the all-pairs fit, which the outliers pulled off because least squares weights every pair equally. Its translation error of 4.5 mm matches the clean Task 1 fit.
+
+When the threshold is much too small, noise pushes true pairs past it, consensus sets shrink to a few points, the winner is picked by chance among near ties, and the refit has too few pairs to be stable. When it is much too large, every hypothesis collects nearly all pairs including the corrupted ones, the consensus count stops separating good samples from bad, and the refit degenerates toward the all-pairs answer with its 1.5 degree error. A useful threshold sits a few times above the noise of correct pairs and well below the residual of a wrong one.
+
+\section{Real-data ICP and odometry}
+
+\subsection*{ICP on the Open3D fragments}
+
+ICP here is nearest-neighbor matching with the Task 1 functions, trimming to the closest $\max(3, \lceil f K \rceil)$ matches, and a left-composed SVD update per iteration. The demo run starts from the supplied perturbed initialization with 80 iterations, a 12 cm match radius, a 0.9 trim fraction, and a $10^{-6}$ tolerance, and ends at an RMSE of 15.5 mm. Figure~\ref{fig:icpdemo} shows the pair before and after. The file \texttt{icp\_iterations.mp4} replays every recorded transform from the same fixed camera, so the source moves onto the target while the camera stays still.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.6\linewidth]{outputs/task3/icp_demo_alignment.png}
+\caption{Open3D fragments before and after handwritten ICP from the perturbed initialization, same front-facing camera.}
+\label{fig:icpdemo}
+\end{figure}
+
+\subsection*{Adjacent-frame odometry}
+
+The same function with its defaults aligns all 1{,}023 adjacent pairs, using the previous relative motion as the initial guess, and poses are chained as $T_{L_{t+1} \to W} = T_{L_t \to W} T_{L_{t+1} \to L_t}$ from the identity. In Figure~\ref{fig:conv} the median trimmed RMSE only falls from 0.177 m to 0.159 m, because the initial guess already places each scan within a few centimeters and the floor is set by the 0.25 m point spacing. No pair needed more than 24 iterations, and the plot only includes pairs still running at each iteration, so the rise at the end comes from the few hard pairs left after the rest have stopped.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.55\linewidth]{outputs/task3/icp_convergence.png}
+\caption{ICP convergence over the 1{,}023 LiDAR pairs.}
+\label{fig:conv}
+\end{figure}
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{lr}
+\toprule
+Demo final RMSE & 15.5 mm \\
+Mean one-step translation RTE & 21.7 mm \\
+Mean one-step rotation RTE & 0.122$^\circ$ \\
+Planar XY ATE, first pose identity, no further alignment & 5.50 m \\
+Frames & 1{,}024 \\
+\bottomrule
+\end{tabular}
+\caption{Task 3 metrics from \texttt{outputs/task3/metrics.json}.}
+\label{tab:odom}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.4\linewidth]{outputs/task3/trajectory_comparison.png}
+\caption{Ground-truth and ICP trajectories in world x and y at equal scale.}
+\label{fig:traj}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.8\linewidth]{outputs/task3/bev_comparison.png}
+\caption{Accumulated LiDAR intensity in bird's-eye view using ground-truth poses and ICP poses, same extent and resolution.}
+\label{fig:bev}
+\end{figure}
+
+Per-step errors of about 2 cm and a tenth of a degree still add up to a 5.5 m ATE over the 870 m drive, which means they carry a consistent bias, mostly in heading. In Figure~\ref{fig:traj} the two paths coincide along the opening eastbound leg and most of the southbound leg, and ICP runs a few meters outside GT along the lower right and the bottom. After the hairpin on the far left and the return near $y = -160$ m, the ICP path turns north about 15 m east of the GT turn and its final leg runs parallel to GT but displaced, ending near $x = 20$ m instead of closing on the start. Figure~\ref{fig:bev} shows the same error as doubled structure. The final northbound street and the blocks around the start appear twice in the ICP panel, once from the opening pass and once from the return, shifted east. Streets driven only once look as sharp as in the GT panel, since there is no second pass to disagree with.
+
+The online video \texttt{icp\_odometry\_online.mp4} runs all 1{,}024 frames at 24 fps in a heading-up bird's-eye view centered on the LiDAR. The left panel is the current sweep, which stays sharp throughout because each pair is locally well aligned. The right panel accumulates intensity through the current frame under the ICP poses and draws the trajectory so far in cyan, growing one pose per frame. Structures near the vehicle stay sharp there too, while structures seen early and revisited at the end no longer coincide, and the overlay fails to close on itself at the same place the map doubles.
+
+\section{Semantic voxel mapping}
+
+\subsection*{Dense grid estimate}
+
+A dense grid over a $500 \times 500 \times 20$ m region at $s = 0.25$ m has $\lceil 500/0.25 \rceil = 2{,}000$ cells along x and y and $\lceil 20/0.25 \rceil = 80$ cells along z, so the score tensor would have shape $2{,}000 \times 2{,}000 \times 80 \times 19$. That is $3.2 \times 10^8$ voxels. At 19 float32 scores per voxel, or 76 bytes, the scores alone would take $2.43 \times 10^{10}$ bytes, about 24.3 GB, before counting occupancy, counts, or any index structure. Almost all of that volume is empty air or ground that no scan touches.
+The fused map occupies 843{,}990 voxels, 0.26 percent of that count, so a dense grid would spend 99.7 percent of its memory on cells that are never observed. Storing only occupied coordinates with their summed evidence, as in COO storage, keeps memory proportional to the observed surface, about 64 MB here, instead of the bounding volume.
+
+\subsection*{Fusion and results}
+
+Voxel indices are $v = \lfloor (p_W - o)/s \rfloor$ without clipping. Fusion drops out-of-bounds indices, takes a float64 log-softmax of the int8 logits, merges repeated coordinates with \texttt{torch.unique}, and sums log-probabilities per voxel with \texttt{index\_add\_}.
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{lr}
+\toprule
+\texttt{voxel\_coordinates\_correct} & true \\
+Frames aggregated & 1{,}024 \\
+Mapping points after filtering and the 2{,}500 cap & 2{,}560{,}000 \\
+Grid shape over the observed bounding box & $1{,}063 \times 1{,}355 \times 38$ \\
+Occupied voxels & 843{,}990 \\
+Voxel accuracy & 1.000 \\
+Mean IoU over 17 present classes & 1.000 \\
+Mean observations per voxel & 3.03 \\
+Maximum observations per voxel & 36 \\
+Mean normalized entropy & 0.027 \\
+\bottomrule
+\end{tabular}
+\caption{Task 4 metrics from \texttt{semantic\_metrics.json} and \texttt{voxel\_statistics.json}.}
+\label{tab:sem}
+\end{table}
+
+An accuracy of exactly one is expected. The logits are built from the ground-truth labels, so fusing them and comparing with the per-voxel majority of the same labels checks the coordinates and the accumulation, not a semantic model. The mean normalized entropy of 0.027 is more informative. It is zero for a voxel whose observations all agree, so a nonzero mean shows that some voxels received more than one label across frames.
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{lrr@{\hspace{2em}}lrr}
+\toprule
+Class & Points & IoU & Class & Points & IoU \\
+\midrule
+car & 189{,}183 & 1.00 & road & 352{,}147 & 1.00 \\
+bicycle & 725 & 1.00 & parking & 10{,}112 & 1.00 \\
+motorcycle & 2{,}467 & 1.00 & sidewalk & 291{,}269 & 1.00 \\
+truck & 2{,}356 & 1.00 & building & 590{,}111 & 1.00 \\
+other-vehicle & 14{,}026 & 1.00 & fence & 90{,}825 & 1.00 \\
+person & 307 & 1.00 & vegetation & 811{,}623 & 1.00 \\
+bicyclist & 332 & 1.00 & trunk & 22{,}471 & 1.00 \\
+terrain & 170{,}494 & 1.00 & pole & 10{,}266 & 1.00 \\
+traffic-sign & 1{,}286 & 1.00 & & & \\
+\bottomrule
+\end{tabular}
+\caption{Per-class IoU for the 17 classes present in the ground-truth majority, with the number of mapping points carrying each label. The classes motorcyclist and other-ground have no points in this clip and are excluded from the mean.}
+\label{tab:iou}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.55\linewidth]{outputs/task4/semantic_occupancy.png}
+\caption{Fused semantic occupancy map, each voxel drawn as an Open3D cube of side 0.25 m, viewed from a shoulder camera.}
+\label{fig:sem}
+\end{figure}
+
+The two Task 4 videos are the turntable, \texttt{semantic\_occupancy.mp4}, and the side-by-side moving view, \texttt{semantic\_lidar\_follow.mp4}, which shows the current sweep colored by range beside the fused cube map from the same camera 3 m above the LiDAR.
+
+Labels compete most along the curb line, visible in Figure~\ref{fig:sem} as the seam between the dark gray road, the yellow sidewalk, and the blue parked cars. Road and sidewalk sit within a few centimeters of the same height, so a 0.25 m cell on the curb collects road points from one side and sidewalk points from the other, and the mix shifts as the cell is seen from 10 to 30 consecutive frames at changing range and angle. The same happens where a car's footprint meets the road. These cells are where the entropy comes from, since cells in the middle of a road or a facade get one label every time.
+
+Weighting every observation equally is a limitation because the scores ignore range, incidence angle, and occlusion. A point at 38 m on a grazing beam counts as much as one at 5 m, and a voxel seen many times from one bad viewpoint accumulates confident but wrong evidence. The entropy here is the softmax of the mean log evidence, so it measures agreement and does not grow more certain with repeated observations the way a posterior would.
+
+The 0.25 m voxel matches the sampling resolution of the archive, so it keeps curb, pole, and car-scale structure while merging returns on the same surface patch. Halving it would raise the occupied count by up to eight times for detail the input does not have, and doubling it would fold curbs into the road and thin objects into their neighbors.
+
+\section{Failure analysis}
+
+The clearest failure is the doubled street at the end of the loop in the ICP bird's-eye view. Point-to-point ICP assumes the nearest target point is the true correspondence. Along a street the dominant surfaces are facades parallel to the direction of travel and the flat road, and sliding along a facade or rotating slightly about the vertical axis barely changes nearest-neighbor distances, so the per-pair fit is weakly constrained in heading and along-track distance. Each pair contributes a small error of the same sign, and by the time the vehicle returns to the start the chained poses place the same buildings in two locations 15 m apart. Nothing in the pipeline can detect this, because every pair is scored only against its neighbor. A loop-closure constraint between the first and last visits to that street would correct it.
+
+\end{document}
