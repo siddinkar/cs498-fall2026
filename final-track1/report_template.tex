@@ -1,0 +1,29 @@
+\documentclass[11pt]{article}
+\usepackage[letterpaper,margin=.85in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx,booktabs,xurl}
+\usepackage[hidelinks]{hyperref}
+\newcommand{\evidence}[1]{\par\medskip\begin{center}\IfFileExists{outputs/report/#1}{\includegraphics[width=\linewidth,height=.72\textheight,keepaspectratio]{outputs/report/#1}}{\fbox{\parbox{.92\linewidth}{Generate outputs/report/\detokenize{#1} after full validation.}}}\end{center}\par\medskip}
+\title{CS 498 Final Project - Track 1\\Multi-View 3D Semantic Occupancy Prediction}
+\author{Your name and NetID}\date{Fall 2026}
+\begin{document}\maketitle
+\noindent\textbf{Non-AI-assisted individual work.} Complete this report yourself; remove instructional placeholders before submission.
+\section{Goal, related work, and final design}
+Explain the task, cite relevant prior work, describe your implemented method and justify your design choices. Distinguish your contribution from provided components and declared pretrained sources.
+\section{Reproducibility}
+Record environment, hardware, dependencies, training settings, selected epoch and exact reproduction commands. State RGB-only or RGB-D input use. Give the pinned data revision, final source-tree SHA-256 and selected CSV SHA-256 from the runtime receipt. Identify your Kaggle username and selected entry.
+\section{Validation results and controlled comparison}
+Report full 150-sample Val house-macro completion mIoU, accuracy and occupied IoU, plus per-house and per-class behavior. Compare at least one controlled change; explain what was held fixed. Select your final method using Val, not leaderboard probing.
+\begin{center}\begin{tabular}{lrrr}\toprule Method & mIoU & Occupied IoU & Accuracy\\\midrule Baseline & -- & -- & --\\Final method & -- & -- & --\\\bottomrule\end{tabular}\end{center}
+\evidence{class_iou.png}
+\section{Qualitative evidence and error analysis}
+Show the three views and explain observed versus hidden target regions. Discuss genuine successes and failures, class confusions, occlusion, thin objects and bounds. Figures must represent your final submitted method on provided simulator-generated Val data.
+\evidence{inputs.png}
+\evidence{completion.png}
+\evidence{comparison.png}
+\section{Kaggle entry, limitations and conclusion}
+Identify the selected entry, its score and runtime. Explain limitations, resource tradeoffs, unsuccessful ideas and conclusions supported by your controlled experiments. State external sources and policy compliance truthfully.
+\begin{thebibliography}{9}
+\bibitem{example} Replace this placeholder with papers and sources actually used.
+\end{thebibliography}
+\end{document}

@@ -1,0 +1,73 @@
+\documentclass[11pt]{article}
+\usepackage[margin=0.85in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,booktabs,graphicx,xurl,hyperref}
+\graphicspath{{outputs/task1/}{outputs/task2/}{outputs/task3/debug/}{outputs/task3/lego_train/}{outputs/task3/lego_train/validation/}{outputs/task3/lego_train/mesh/}}
+
+\title{CS 498 HW4 Report\\Tiny NeRF for Novel View Synthesis}
+\author{Your Name (NetID)}
+\date{Fall 2026}
+
+\begin{document}
+\maketitle
+
+\section{Rays and positional encoding}
+Describe the camera-coordinate convention and the world-space ray equation.
+Explain why image rows reverse camera $y$ and why ray directions remain
+unnormalized until rendering. Include
+\path{task1_visual_checkpoint.png}. State the encoded dimensions for the
+provided full-run position and direction settings.
+
+\section{Tiny NeRF and volume rendering}
+Describe the provided network architecture and your forward pass, including
+the skip connection, density head, and view-dependent color branch. Give the
+sampling and alpha-compositing equations you implemented. Include
+\path{task2_visual_checkpoint.png} and briefly interpret its deterministic
+depth, perturbed depth, and compositing panels.
+
+\section{Training and held-out reconstruction}
+Report whether the smoke run completed. Include
+\path{train_psnr_curve.png} and the two final milestone renders
+\path{val_010000_view_00.png} and \path{val_010000_view_01.png}. State the
+final logged training PSNR.
+
+Report the mean validation PSNR and SSIM from
+\path{validation_metrics.csv}. Include at least one
+\path{view_00_comparison.png} from the validation directory and
+\path{turntable_contact_sheet.png}. Describe one visible limitation or
+view-dependent failure.
+
+\section{Density grid and textured mesh}
+State the density-grid bounds, resolution, threshold, mesh vertex/face counts,
+and texture-atlas size. Include the two
+\path{view_00_comparison.png}/\path{view_01_comparison.png} figures from the
+mesh directory. Report the mean direct-NeRF and textured-mesh PSNR/SSIM values
+from \path{mesh/comparison.csv}. Explain two visible differences between
+direct volume rendering and textured-mesh rendering.
+
+\section{Limitations and reproducibility}
+Summarize the commands and hardware used for the full run. Discuss at least
+two limitations of this compact NeRF or its mesh extraction.
+
+\section*{Optional ball-insertion bonus}
+If attempted, state the supplied sphere parameters and explain the
+transmittance-aware compositing rule you implemented. Include
+\path{ball_insertion_contact_sheet.png} and
+\path{ball_visibility.png}. Identify two views with different occlusion
+relationships and explain why expected-depth z-buffering is insufficient.
+Remove this section if you did not attempt the bonus.
+
+\section*{AI-use declaration}
+Check one statement.
+
+\begin{itemize}
+  \item[$\square$] I did not use generative AI for this homework.
+  \item[$\square$] I used generative AI only in ways explicitly allowed by
+  the course policy. Tool/model, purpose, and affected files:
+  \underline{\hspace{1.6in}}
+\end{itemize}
+
+I confirm that the submitted code, outputs, numerical results, and written
+analysis comply with the course collaboration and AI-use policy.
+
+\end{document}

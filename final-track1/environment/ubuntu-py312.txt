@@ -1,0 +1,9 @@
+# Tested Ubuntu/Python 3.12 environment. Install Torch from the official index first.
+# Use with: python -m pip install -r requirements.txt -c environment/ubuntu-py312.txt
+torch==2.11.0
+numpy==2.1.3
+Pillow==12.3.0
+matplotlib==3.9.2
+huggingface-hub==1.2.4
+kaggle==2.2.4
+pytest==8.4.2

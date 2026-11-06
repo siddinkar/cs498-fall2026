@@ -1,0 +1,8 @@
+{
+  "schema": "cs498.track2.evidence_selection.v1",
+  "final_method": "my_method",
+  "final_config": "code/final_config.json",
+  "dev": ["dev_scene_000", "dev_scene_001", "dev_scene_002"],
+  "val": ["val_scene_000", "val_scene_001", "val_scene_002"],
+  "test": ["test_scene_000", "test_scene_001", "test_scene_002"]
+}

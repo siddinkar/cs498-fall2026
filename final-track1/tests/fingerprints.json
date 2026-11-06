@@ -1,0 +1,10 @@
+{
+  "project_voxel_centers": "2fabe5e1e4f983d80cb7f12cb282a06eed0d3e01b72e0e4af978c2829d27607c",
+  "factorized_logits": "9490a241ee2fd4ba2b298bb3d7836219e5a8075aa63b40197878bafd892e31de",
+  "SpatialUNet3d.forward": "c83ebb8459e3dd40859759c55bb5a24fa6302bd6a16bfb3881127c23ae766e67",
+  "TriViewLiftFuseUNet._project_and_sample": "afdb2a097d2f69c5b9f7cb3a0643968204bc6c553dbd9b99ef74a24e05db0001",
+  "TriViewLiftFuseUNet.fuse_views": "bb38bcb4e0a466b27a3d0aa2bb2f4d3bcb8dea54153c3bcdc85355fdc3573b1f",
+  "class_weights_from_histogram": "6dfda7f110d73ace304e6d9c88f82c4bfcdfafa64e1ecbd51d290afe638f9d11",
+  "completion_loss": "42adb331bbe1c9870d8059a9358e4374d11df226f4a6dbd311c6434804b3031a",
+  "metrics_from_confusion": "d1e9e6d4b72d88fca170e45daa74a0c4f24de76f55e732da607b53cc86c9c650"
+}

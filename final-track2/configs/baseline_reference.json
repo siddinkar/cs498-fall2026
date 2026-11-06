@@ -1,0 +1,85 @@
+{
+  "schema": "cs498.track2.baseline_reference.v2",
+  "status": "frozen",
+  "baseline": "Pi3X + Florence-2/SAM2 + multi-view instance fusion + Fire3D",
+  "note": "Contextual full-split means from immutable, size-budgeted baseline GLBs, not minimum attainment thresholds for evidence/report points. Native remeshing and texture baking may produce slightly different results on a rerun.",
+  "protocol_sha256": "2c27f105b6ab38376bcd2793e5c3b67eb10f608bade6269e10145936a44d7ffc",
+  "metric_sha256": "a7af390f19be5262076759f5e5ce0bd8bb58c055166ba9ee6d3e6b09e998da52",
+  "splits": {
+    "dev": {
+      "schema": "cs498.track2.split_summary.v2",
+      "split": "dev",
+      "expected": 30,
+      "completed": 30,
+      "missing": [],
+      "means": {
+        "matching": 0.6627248677248677,
+        "scene_geometry": 0.5900512318954487,
+        "object_geometry": 0.3826963588301298,
+        "scene_appearance": 0.5203582019306151,
+        "object_appearance": 0.3216304396474055,
+        "collision_free": 0.01111111111111111,
+        "benchmark": 45.450389903790345
+      }
+    },
+    "val": {
+      "schema": "cs498.track2.split_summary.v2",
+      "split": "val",
+      "expected": 10,
+      "completed": 10,
+      "missing": [],
+      "means": {
+        "matching": 0.4321423021423021,
+        "scene_geometry": 0.5746043292456142,
+        "object_geometry": 0.19535597993875195,
+        "scene_appearance": 0.4903115532742729,
+        "object_appearance": 0.15586138747957562,
+        "collision_free": 0.0,
+        "benchmark": 33.73464633784109
+      }
+    },
+    "test": {
+      "schema": "cs498.track2.split_summary.v2",
+      "split": "test",
+      "expected": 20,
+      "completed": 20,
+      "missing": [],
+      "means": {
+        "matching": 0.22549558284852403,
+        "scene_geometry": 0.5299216757601578,
+        "object_geometry": 0.07546722501581318,
+        "scene_appearance": 0.49291856938566747,
+        "object_appearance": 0.07986399574709341,
+        "collision_free": 0.0,
+        "benchmark": 25.209428149481315
+      }
+    }
+  },
+  "provenance": {
+    "dev": {
+      "csv_sha256": "a31761ca3b73b928c7b904057aaa08e9975648cb37e0d28c77625d2ea610ff05",
+      "metric_sha256": "a7af390f19be5262076759f5e5ce0bd8bb58c055166ba9ee6d3e6b09e998da52",
+      "python": "3.12.4",
+      "measured_case_cpu_seconds": 165.55280643797596
+    },
+    "val": {
+      "csv_sha256": "35b5afc836af6686b42d466128f2ca18cdabb4d4ff4ef59b61fc464047c5bc34",
+      "metric_sha256": "a7af390f19be5262076759f5e5ce0bd8bb58c055166ba9ee6d3e6b09e998da52",
+      "python": "3.12.4",
+      "measured_case_cpu_seconds": 57.155505294009345
+    },
+    "test": {
+      "csv_sha256": "950b046ea2e8600fbc6e45f631f557aab59033515627bbdcf2bf98b6d8b1adda",
+      "metric_sha256": "a7af390f19be5262076759f5e5ce0bd8bb58c055166ba9ee6d3e6b09e998da52",
+      "python": "3.12.4",
+      "measured_case_cpu_seconds": 99.42877078099991
+    }
+  },
+  "online_test_reference": {
+    "competition": "cs498-fall-2026-track2-reconstruction",
+    "sandbox_submission_id": 57361419,
+    "score": 25.20942,
+    "metric_version": 13,
+    "display_quantization_unit": 1e-05
+  }
+}

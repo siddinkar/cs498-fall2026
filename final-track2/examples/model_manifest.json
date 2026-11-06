@@ -1,0 +1,5 @@
+{
+  "required": false,
+  "checkpoints": [],
+  "notes": "Use false/[] only if your final method needs no weights. Otherwise set required:true and list each checkpoint with either path (under models/) or a stable HTTPS url, plus its file sha256. Cite pretrained sources/licenses in models/README.md. Never include credentials or expiring signed URLs."
+}

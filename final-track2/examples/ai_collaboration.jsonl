@@ -1,0 +1,2 @@
+{"type":"template_instructions","message":"Replace this entry with your own meaningful collaboration record. Never include credentials or private data."}
+{"type":"example_only","task":"Investigate duplicate object tracks","ai_suggestion":"Compare temporal support before changing the fusion threshold","student_decision":"Describe what you accepted or rejected and why","verification":"Record exact experiment config, cases, metrics, and failure analysis"}

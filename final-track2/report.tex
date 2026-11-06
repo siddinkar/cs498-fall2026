@@ -1,0 +1,104 @@
+\documentclass[11pt]{article}
+\usepackage[margin=.82in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx,booktabs,amsmath,xurl}
+\usepackage[hidelinks]{hyperref}
+\title{CS 498 Final Project - Track 2\\Complete 3D Scene Reconstruction}
+\author{Your Name / NetID}
+\date{Fall 2026}
+\begin{document}
+\maketitle
+\section{Method and motivation}
+Explain your changes relative to the provided baseline, relevant related work,
+and the fully automatic input-to-output pipeline. Category prediction is not required.
+We value original ideas and thoughtful experimentation. State your hypothesis,
+design rationale, and own contribution; an informative negative result is useful.
+Present one final method, selected by the highest mean benchmark across all
+ten Val scenes. Identify its exact code/configuration/model snapshot; use that
+same frozen version for the final Val table, Test-results ZIP and Kaggle CSV.
+% Use e.g. \cite{xia2026fire3d}; reusable entries are in references.bib.
+% Add your own related work, then uncomment the bibliography commands below.
+\section{Experimental protocol}
+Give code revision, dependencies, hardware, checkpoint sources/hashes, commands,
+configurations, inference time, and the use of Dev versus Val. Report the
+official Kaggle score with its submission ID, not an invented local Test score.
+\section{Quantitative results and controlled comparisons}
+Report all ten Val cases, split means, the baseline comparison, and at least
+one controlled comparison isolating each claimed improvement. Missing/failed
+cases count as zero. Report all six metric groups, including static collision-free recall.
+Comparisons support the selected final method; do not present several final
+entries or combine the best cases/metrics from different versions.
+For the optional novel-idea bonus, explain the substantive idea implemented in
+that final version and give its actual Val results and controlled comparison.
+The same final Kaggle entry completes the private-Test evidence; do not invent
+GT comparisons or submit an extra method.
+\section{Analysis and visualization}
+\subsection{Make the visual story easy to follow}
+Use the handout's opening figures as a presentation example, not results to
+copy. Start with a few input RGB frames and the known camera poses. Then show
+your instance IDs consistently across projected instance views, the assembled
+scene, and zoomed isolated-object renders. Two opposite-side views help reveal
+missing backs, undersides, or texture; a front-facing image alone is not proof
+of a complete reconstruction. Mask/box panels may help explain your method,
+but are not additional required output files.
+
+For Dev/Val collision evidence, mark the reported object IDs and geometric
+interpenetration witnesses, or state explicitly that no collision was found.
+Include proxy/fallback and timeout status where applicable. This is static
+geometry evaluation, not a claim about dynamic stability. State whether each
+panel is your prediction, a baseline, or a GT reference. Do not edit geometry
+or images to fabricate a clean result.
+These layout suggestions do not add new scoring criteria or change the
+required nine-scene evidence below; Test remains prediction-only.
+\subsection{Nine-scene results and visual evidence}
+List three distinct selected scene IDs from each split in this table. All
+selected outputs must come from the same final method named above. There is
+no baseline-score threshold for this evidence component.
+\begin{center}
+\begin{tabular}{llll}\toprule
+Split & Selected scene 1 & Selected scene 2 & Selected scene 3 \\
+\midrule
+Dev & & & \\
+Val & & & \\
+Test & & & \\
+\bottomrule\end{tabular}
+\end{center}
+For each selected Dev/Val scene, show compact matching, scene geometry and
+appearance, object geometry and appearance, and static collision evidence.
+Link the complete evaluator dump, identify instance IDs, and report all six
+metric groups. Honest failures must remain visible.
+For each selected Test scene, show prediction-only instance, whole-scene,
+and isolated-object views (use \path{scripts/student/preview_outputs.py}). Name the scenes for
+the official collision check; do not claim private GT comparisons or local
+Test metrics. The Kaggle total may be quoted with its submission ID. No post-evaluation report
+resubmission is required.
+\subsection{Interpretation and failure analysis}
+For Dev/Val, show instance matches, full-scene and individual-object GT/prediction views,
+occluded-side errors, and collision/contact evidence. Discuss failure
+cases, trade-offs, and limitations; do not cherry-pick only successful cases.
+\section{AI-human collaboration}
+Summarize the AI tools/tasks, important suggestions, your decisions, verification,
+failed attempts, and what you learned. Reference the submitted collaboration
+record; you remain responsible for all code and reported results.
+\section{Reproduction and submission checklist}
+List the exact final command, model/checkpoint file SHA-256, ten-case Val
+summary, selected scene IDs, per-case evidence, source snapshot, and AI record.
+Submit report, actual source code, configuration/dependencies, model declaration,
+AI record and the generated HF pointer in the small course ZIP. Large results
+and the exact Kaggle CSV/receipt go in your own HF dataset's \path{results.zip}.
+State the dataset ID, full 40-character commit, results ZIP SHA-256 and actual
+Kaggle submission ID explicitly below; they must match \path{results_location.json}.
+Do not use a moving \texttt{main} link or a short hash. Keep the repo private during
+development, then make it public/ungated at final hand-in. Verify anonymous access;
+do not submit tokens. Keep this revision available through grading/appeals.
+An online code link does not replace the submitted source snapshot. Retain both
+archive hashes. Explain failures; do not link only to files on your computer.
+\begin{description}
+\item[HF dataset:] Your account / results repository.
+\item[Full commit:] The 40-character commit containing \path{results.zip}.
+\item[Results SHA-256:] The generated 64-character file hash.
+\item[Kaggle submission:] The actual selected final submission ID.
+\end{description}
+% \bibliographystyle{unsrt}
+% \bibliography{references}
+\end{document}

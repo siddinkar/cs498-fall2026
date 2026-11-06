@@ -1,0 +1,12 @@
+name: tabletop-fire3d
+channels:
+  - nvidia
+  - conda-forge
+dependencies:
+  - python=3.10.20
+  - cuda-toolkit=12.8
+  - gcc_linux-64=12
+  - gxx_linux-64=12
+  - cmake
+  - ninja
+  - pip

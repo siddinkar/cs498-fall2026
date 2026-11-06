@@ -1,0 +1,3 @@
+# Packaged inference dependencies; the provided tools have their own requirements.
+numpy>=1.24,<3
+torch>=2.4,<3

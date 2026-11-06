@@ -1,0 +1,4 @@
+# Metric/visualization dependencies installed by scripts/setup/evaluation.sh.
+# No torch, Pi3X, SAM2, Florence or Fire3D weights are required by evaluation.
+-r ../../requirements.txt
+# External renderer: Blender 4.2.0. No simulation or model weights needed.

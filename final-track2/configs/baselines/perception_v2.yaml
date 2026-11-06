@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "seed": 4982026,
+  "python": "env/baseline_2d/.venv/bin/python",
+  "input_root": "data/scenes",
+  "output_root": "outputs",
+  "frame_stride": 1,
+  "fps": 24,
+  "geometry": {
+    "repo": "third_party/Pi3",
+    "repo_revision": "9fa3ddb3f8d53041f8b2738df404f62223bbaa7b",
+    "weights": "cache/models/pi3x/model.safetensors",
+    "model": "yyfz233/Pi3X",
+    "model_revision": "bb1deea4d7423de5b30691739cb451a3f57dc1d5",
+    "resolution": 504,
+    "anchor_views": 8,
+    "target_batch": 8,
+    "confidence_threshold": 0.1,
+    "depth_edge_rtol": 0.03
+  },
+  "proposals": {
+    "florence_path": "cache/models/florence2",
+    "florence_revision": "4a12a2b54b7016a48a22037fbd62da90cd566f2a",
+    "tasks": [
+      "<OD>",
+      "<REGION_PROPOSAL>",
+      "<MORE_DETAILED_CAPTION>",
+      "<CAPTION_TO_PHRASE_GROUNDING>"
+    ],
+    "max_new_tokens": 1024,
+    "num_beams": 3,
+    "box_dedup_iou": 0.92,
+    "mask_dedup_iou": 0.85,
+    "min_mask_pixels": 20,
+    "max_mask_fraction": 0.96,
+    "sam2_repo": "third_party/sam2",
+    "sam2_config": "configs/sam2.1/sam2.1_hiera_s.yaml",
+    "sam2_checkpoint": "cache/models/sam2/sam2.1_hiera_small.pt"
+  },
+  "fusion": {
+    "association_voxel_m": 0.008,
+    "association_radius_m": 0.012,
+    "association_overlap": 0.22,
+    "minimum_track_views": 4,
+    "minimum_lifted_points": 12,
+    "sample_points_per_proposal": 2500,
+    "mask_erosion_pixels": 1,
+    "voxel_m": 0.003,
+    "minimum_voxel_views": 2,
+    "minimum_instance_points": 100,
+    "skip_low_support": true,
+    "consensus_views": 32,
+    "consensus_depth_tolerance_m": 0.015,
+    "consensus_minimum_votes": 3,
+    "bbox_quantile": 0.005,
+    "minimum_track_fraction": 0.25,
+    "nms_3d": {
+      "enabled": true,
+      "iou_threshold": 0.65
+    }
+  }
+}

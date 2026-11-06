@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tabletop.textured_mesh_scene.v1",
+  "title": "Tabletop textured mesh scene, version 1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "scene_id", "units", "mesh_coordinate_frame", "dataset_coordinate_frame", "mesh_to_dataset_world", "placement", "appearance", "camera_path", "source_path", "meshes", "skipped_instances", "render", "frozen_profile"],
+  "properties": {
+    "schema": {"const": "tabletop.textured_mesh_scene.v1"},
+    "scene_id": {"type": "string", "minLength": 1},
+    "units": {"const": "meters"},
+    "mesh_coordinate_frame": {"const": "gltf_world_y_up_right_handed"},
+    "dataset_coordinate_frame": {"const": "blender_world_z_up_right_handed"},
+    "mesh_to_dataset_world": {"const": [[1,0,0,0],[0,0,-1,0],[0,1,0,0],[0,0,0,1]]},
+    "placement": {"type": "string"},
+    "appearance": {"type": "string"},
+    "camera_path": {"const": "inputs/cameras.npz"},
+    "source_path": {"const": "inputs/source.json"},
+    "frozen_profile": {"type": ["string", "null"]},
+    "meshes": {"type": "array", "minItems": 1, "maxItems": 64, "items": {
+      "type": "object", "additionalProperties": false,
+      "required": ["instance_id", "category", "glb_path", "sha256", "bbox_dataset_world_m", "vertices", "faces"],
+      "properties": {
+        "instance_id": {"type": "integer", "minimum": 1, "maximum": 32767},
+        "category": {"type": "string", "minLength": 1},
+        "glb_path": {"type": "string", "pattern": "^meshes/obj_[0-9]{3,}\\.glb$"},
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "vertices": {"type": "integer", "minimum": 3, "maximum": 2000000},
+        "faces": {"type": "integer", "minimum": 1, "maximum": 2000000},
+        "bbox_dataset_world_m": {"type": "array", "minItems": 2, "maxItems": 2, "items": {
+          "type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "number"}
+        }}
+      }
+    }},
+    "skipped_instances": {"type": "array", "items": {"type": "object"}},
+    "render": {"type": "object", "additionalProperties": false,
+      "required": ["rgb_directory", "video_path", "comparison_path", "environment_path"],
+      "properties": {
+        "rgb_directory": {"const": "render/rgb"},
+        "video_path": {"const": "render/reconstruction.mp4"},
+        "comparison_path": {"const": "render/comparison.mp4"},
+        "environment_path": {"const": "render/environment.blend"}
+      }
+    }
+  }
+}

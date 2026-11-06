@@ -1,0 +1,53 @@
+{
+  "schema": "cs498.track2.data_distribution.v1",
+  "status": "published_and_anonymously_download_verified",
+  "scene_counts": {
+    "dev": 30,
+    "val": 10,
+    "test": 20
+  },
+  "archives": [
+    {
+      "split": "dev",
+      "kind": "inputs",
+      "filename": "track2_dev_inputs.zip",
+      "bytes": 1689242037,
+      "sha256": "9975b07b5d4b9d0450c5bad5453f32b091100b7892199e3dd3f8776cebd4d452",
+      "url": "https://huggingface.co/datasets/hongchi/cs498/resolve/1888992be3565b63c81e23191ef81135b6e55230/final-track2/track2_dev_inputs.zip"
+    },
+    {
+      "split": "dev",
+      "kind": "evaluation",
+      "filename": "track2_dev_evaluation.zip",
+      "bytes": 294620278,
+      "sha256": "cd796c43ed23394e5ef75a803bee1bd629088078076cf25625ff0aecb92cd94b",
+      "url": "https://huggingface.co/datasets/hongchi/cs498/resolve/1888992be3565b63c81e23191ef81135b6e55230/final-track2/track2_dev_evaluation.zip"
+    },
+    {
+      "split": "val",
+      "kind": "inputs",
+      "filename": "track2_val_inputs.zip",
+      "bytes": 567319241,
+      "sha256": "9f0f0d6589434e70ae85893cda6b02bc666ab36acd28092934afd86c841093dc",
+      "url": "https://huggingface.co/datasets/hongchi/cs498/resolve/1888992be3565b63c81e23191ef81135b6e55230/final-track2/track2_val_inputs.zip"
+    },
+    {
+      "split": "val",
+      "kind": "evaluation",
+      "filename": "track2_val_evaluation.zip",
+      "bytes": 178885312,
+      "sha256": "725e4941c0c9d09f8e3ae166d13c22787f53ce5650295babe80bfa446fe1de67",
+      "url": "https://huggingface.co/datasets/hongchi/cs498/resolve/1888992be3565b63c81e23191ef81135b6e55230/final-track2/track2_val_evaluation.zip"
+    },
+    {
+      "split": "test",
+      "kind": "inputs",
+      "filename": "track2_test_inputs.zip",
+      "bytes": 1209472908,
+      "sha256": "86ca1fec51f705fbb15754568a862c80c1365bb79b88e0e34be77dd62aa4fccc",
+      "url": "https://huggingface.co/datasets/hongchi/cs498/resolve/1888992be3565b63c81e23191ef81135b6e55230/final-track2/track2_test_inputs.zip"
+    }
+  ],
+  "repo_id": "hongchi/cs498",
+  "revision": "1888992be3565b63c81e23191ef81135b6e55230"
+}

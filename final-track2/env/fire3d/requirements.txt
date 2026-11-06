@@ -1,0 +1,12 @@
+# Torch is installed separately from the CUDA 12.8 wheel index.
+-e third_party/Fire3D
+setuptools==75.8.2
+wheel
+spconv-cu118==2.3.8
+xformers==0.0.31.post1
+flash-attn==2.7.3
+# Native NATTEN wheel for Torch 2.7/CUDA 12.8; installed with --no-deps.
+# natten==0.21.0+torch270cu128 --find-links https://whl.natten.org
+matplotlib==3.10.9
+plotly==7.1.0
+fast-simplification==0.2.0

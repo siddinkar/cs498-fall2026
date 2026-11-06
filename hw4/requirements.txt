@@ -1,0 +1,8 @@
+numpy
+torch
+imageio[ffmpeg]
+imageio-ffmpeg
+matplotlib
+tqdm
+scikit-image
+xatlas
