@@ -22,14 +22,40 @@ def encode_targets(boxes: np.ndarray) -> dict[str, np.ndarray]:
     cos(yaw))`. The mask marks valid rows among `MAX_OBJECTS` slots.
     """
     # ------------------------ Task 2A Modify your code below --------------------
+    heatmap = np.zeros((NUM_CLASSES, OUT_H, OUT_W), dtype=np.float32)
+    inds = np.zeros(MAX_OBJECTS, dtype=np.int64)
+    mask = np.zeros(MAX_OBJECTS, dtype=np.uint8)
+    reg = np.zeros((MAX_OBJECTS, 2), dtype=np.float32)
+    height = np.zeros((MAX_OBJECTS, 1), dtype=np.float32)
+    dims = np.zeros((MAX_OBJECTS, 3), dtype=np.float32)
+    rot = np.zeros((MAX_OBJECTS, 2), dtype=np.float32)
+
+    boxes = np.asarray(boxes, dtype=np.float32).reshape(-1, 7)
+    u, v, valid = metric_to_output_grid(boxes[:, 0], boxes[:, 1])
+    slot = 0
+    for i in range(len(boxes)):
+        if not valid[i] or slot >= MAX_OBJECTS:
+            continue
+        x, y, z, l, w, h, yaw = boxes[i]
+        col, row = int(np.floor(u[i])), int(np.floor(v[i]))
+        radius = gaussian_radius(w / OUTPUT_RESOLUTION, l / OUTPUT_RESOLUTION)
+        draw_gaussian(heatmap[0], (col, row), radius)
+        inds[slot] = row * OUT_W + col
+        mask[slot] = 1
+        reg[slot] = (u[i] - col, v[i] - row)
+        height[slot] = z
+        dims[slot] = np.log([l, w, h])
+        rot[slot] = (np.sin(yaw), np.cos(yaw))
+        slot += 1
+
     return {
-        "heatmap": np.zeros((NUM_CLASSES, OUT_H, OUT_W), dtype=np.float32),
-        "inds": np.zeros(MAX_OBJECTS, dtype=np.int64),
-        "mask": np.zeros(MAX_OBJECTS, dtype=np.uint8),
-        "reg": np.zeros((MAX_OBJECTS, 2), dtype=np.float32),
-        "height": np.zeros((MAX_OBJECTS, 1), dtype=np.float32),
-        "dims": np.zeros((MAX_OBJECTS, 3), dtype=np.float32),
-        "rot": np.zeros((MAX_OBJECTS, 2), dtype=np.float32),
+        "heatmap": heatmap,
+        "inds": inds,
+        "mask": mask,
+        "reg": reg,
+        "height": height,
+        "dims": dims,
+        "rot": rot,
     }
     # ---------------------- DO NOT MODIFY CODE OUTSIDE THE BLOCK ----------------
 
@@ -37,7 +63,16 @@ def encode_targets(boxes: np.ndarray) -> dict[str, np.ndarray]:
 def decode_targets(targets: dict[str, np.ndarray]) -> np.ndarray:
     """Invert `encode_targets` and return decoded metric boxes `[M,7]`."""
     # ------------------------ Task 2B Modify your code below --------------------
-    return np.zeros((0, 7), dtype=np.float32)
+    valid = targets["mask"].astype(bool)
+    inds = targets["inds"][valid]
+    row, col = inds // OUT_W, inds % OUT_W
+    u = col + targets["reg"][valid, 0]
+    v = row + targets["reg"][valid, 1]
+    x, y = output_grid_to_metric(u, v)
+    z = targets["height"][valid, 0]
+    l, w, h = np.exp(targets["dims"][valid]).T
+    yaw = np.arctan2(targets["rot"][valid, 0], targets["rot"][valid, 1])
+    return np.stack([x, y, z, l, w, h, yaw], axis=1).astype(np.float32)
     # ---------------------- DO NOT MODIFY CODE OUTSIDE THE BLOCK ----------------
 
 

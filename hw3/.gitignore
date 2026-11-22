@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+outputs/
+data/train.npz
+data/val.npz
+data/test.npz
+data/*.zip
+slurm/*.out

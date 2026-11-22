@@ -23,7 +23,8 @@ from hw3_utils import (
 def suppress_nonmaxima(heatmap: torch.Tensor, kernel: int = 3) -> torch.Tensor:
     """Keep only local maxima in a `[B,C,H,W]` probability heatmap."""
     # ----------------------- Task 4A Modify your code below -----------------
-    return heatmap
+    pooled = F.max_pool2d(heatmap, kernel, stride=1, padding=kernel // 2)
+    return heatmap * (pooled == heatmap).float()
     # ---------------------- DO NOT MODIFY CODE OUTSIDE THE BLOCK ----------------
 
 
@@ -51,13 +52,33 @@ def decode_predictions(predictions: dict[str, torch.Tensor], score_threshold=0.0
     yaw with `atan2(sin,cos)`. Finally apply score filtering and rotated NMS.
     """
     # ----------------------- Task 4B Modify your code below -----------------
-    batch = predictions["heatmap"].shape[0]
-    return [
-        {"boxes": np.zeros((0, 7), dtype=np.float32),
-         "scores": np.zeros(0, dtype=np.float32),
-         "classes": np.zeros(0, dtype=np.int64)}
-        for _ in range(batch)
-    ]
+    heatmap = suppress_nonmaxima(torch.sigmoid(predictions["heatmap"]))
+    scores, inds, classes, rows, cols = topk_centers(heatmap, topk)
+    reg = gather_map(predictions["reg"], inds)
+    height = gather_map(predictions["height"], inds)
+    dims = gather_map(predictions["dims"], inds)
+    rot = gather_map(predictions["rot"], inds)
+
+    u = cols + reg[..., 0]
+    v = rows + reg[..., 1]
+    x = X_MIN + u * OUTPUT_RESOLUTION
+    y = Y_MIN + (OUT_H - v) * OUTPUT_RESOLUTION
+    yaw = torch.atan2(rot[..., 0], rot[..., 1])
+    boxes = torch.stack([x, y, height[..., 0], dims[..., 0].exp(), dims[..., 1].exp(), dims[..., 2].exp(), yaw], dim=-1)
+
+    results = []
+    for b in range(boxes.shape[0]):
+        keep = scores[b] >= score_threshold
+        frame_boxes = boxes[b][keep].cpu().numpy().astype(np.float32)
+        frame_scores = scores[b][keep].cpu().numpy().astype(np.float32)
+        frame_classes = classes[b][keep].cpu().numpy().astype(np.int64)
+        order = rotated_nms(frame_boxes, frame_scores)
+        results.append({
+            "boxes": frame_boxes[order],
+            "scores": frame_scores[order],
+            "classes": frame_classes[order],
+        })
+    return results
     # ---------------------- DO NOT MODIFY CODE OUTSIDE THE BLOCK ----------------
 
 

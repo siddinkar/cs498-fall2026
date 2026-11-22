@@ -23,7 +23,29 @@ def rasterize_points(points: np.ndarray) -> np.ndarray:
     Do not loop over BEV cells.
     """
     # ------------------------ Task 1 Modify your code below ---------------------
-    return np.zeros((4, GRID_H, GRID_W), dtype=np.float32)
+    x, y, z, intensity = points[:, 0], points[:, 1], points[:, 2], points[:, 3]
+    rows, columns, valid = metric_to_grid(x, y)
+    valid &= (z >= Z_MIN) & (z <= Z_MAX)
+    z, intensity = z[valid], intensity[valid]
+    flat = rows[valid] * GRID_W + columns[valid]
+    cells = GRID_H * GRID_W
+
+    count = np.bincount(flat, minlength=cells).astype(np.float64)
+    z_sum = np.bincount(flat, weights=z, minlength=cells)
+    i_sum = np.bincount(flat, weights=intensity, minlength=cells)
+    z_max = np.full(cells, Z_MIN)
+    np.maximum.at(z_max, flat, z)
+
+    occupied = count > 0
+    safe = np.maximum(count, 1.0)
+    z_range = Z_MAX - Z_MIN
+    max_height = np.where(occupied, (z_max - Z_MIN) / z_range, 0.0)
+    mean_height = np.where(occupied, (z_sum / safe - Z_MIN) / z_range, 0.0)
+    mean_intensity = np.where(occupied, np.clip(i_sum / safe, 0.0, 1.0), 0.0)
+    density = np.clip(np.log1p(count) / np.log1p(64.0), 0.0, 1.0)
+
+    bev = np.stack([max_height, mean_height, mean_intensity, density])
+    return bev.reshape(4, GRID_H, GRID_W).astype(np.float32)
     # ---------------------- DO NOT MODIFY CODE OUTSIDE THE BLOCK ----------------
 
 
