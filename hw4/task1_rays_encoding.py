@@ -49,9 +49,21 @@ def get_rays(height: int, width: int, focal: float, c2w: torch.Tensor) -> tuple[
     # converting density to opacity.
     device = c2w.device
     dtype = c2w.dtype
-    return torch.zeros((height, width, 3), device=device, dtype=dtype), torch.zeros(
-        (height, width, 3), device=device, dtype=dtype
-    )
+
+    H = torch.arange(height, device=device, dtype=dtype)
+    W = torch.arange(width, device=device, dtype=dtype)
+
+    i, j = torch.meshgrid(W, H, indexing="xy")
+
+    cam = torch.stack([(i - width * 0.5) / focal,
+                        -(j - height * 0.5) / focal,
+                        torch.full((height, width), -1, device=device, dtype=dtype)],
+                        dim=-1)
+
+    rays_d = cam @ c2w[:3, :3].T
+    rays_o = torch.broadcast_to(c2w[:3, 3], (height, width, 3))
+
+    return (rays_o, rays_d)
     # ======= DO NOT MODIFY CODE OUTSIDE THIS BLOCK =======
 
 
@@ -137,8 +149,20 @@ def positional_encoding(
     # For log_sampling=True, use frequencies 1, 2, 4, ..., 2**(num_freqs-1).
     # For log_sampling=False, use torch.linspace(1, 2**(num_freqs-1), ...).
     # Preserve every leading dimension and concatenate only on the final axis.
-    output_dim = encoded_dim(x.shape[-1], num_freqs, include_input)
-    return torch.zeros((*x.shape[:-1], output_dim), device=x.device, dtype=x.dtype)
+    device = x.device
+    dtype = x.dtype
+
+    if log_sampling:
+        freqs = torch.logspace(0, num_freqs - 1, steps=num_freqs, base=2.0, device=device, dtype=dtype)
+    else:
+        freqs = torch.linspace(1, 2**(num_freqs - 1), steps=num_freqs, device=device, dtype=dtype)
+
+    scaled = (x[..., None, :] * freqs[:, None])
+
+    encodings = torch.cat([torch.sin(scaled), torch.cos(scaled)], dim=-1).flatten(-2)
+    if include_input:
+        encodings = torch.cat([x, encodings], dim=-1)
+    return encodings
     # ======= DO NOT MODIFY CODE OUTSIDE THIS BLOCK =======
 
 

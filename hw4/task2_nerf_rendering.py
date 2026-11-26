@@ -101,8 +101,20 @@ class TinyNeRF(nn.Module):
         # combine a learned point feature with encoded viewdirs for RGB.
         # Runnable placeholder: preserve the public shape and a gradient path
         # so later scripts fail visibly on quality rather than dimensions.
-        zero = self.sigma_head.weight.sum() * 0.0
-        return x.new_zeros((*x.shape[:-1], 4)) + zero
+        h = x
+        for layer_idx, layer in enumerate(self.pts_layers):
+            if layer_idx == self.skip_layer:
+                h = torch.relu(layer(torch.cat([h, x], dim=-1)))
+            else:
+                h = torch.relu(layer(h))
+        
+        sigma_out = self.sigma_head(h)
+        if self.use_viewdirs:
+            h = self.feature_head(h)
+            h = torch.cat([h, viewdirs], dim=-1)
+            h = torch.relu(self.view_layer(h))
+        
+        return torch.cat([self.rgb_head(h), sigma_out], dim=-1)
         # ======= DO NOT MODIFY CODE OUTSIDE THIS BLOCK =======
 
 
@@ -148,6 +160,15 @@ def sample_along_rays(
     z_vals = torch.linspace(near, far, num_samples, device=rays_o.device, dtype=rays_o.dtype).expand(
         num_rays, num_samples
     )
+
+    mids = 0.5 * (z_vals[..., :-1] + z_vals[..., 1:])
+    upper = torch.cat([mids, z_vals[..., -1:]], dim=-1)
+    lower = torch.cat([z_vals[..., :1], mids], dim=-1)
+    u = torch.rand_like(z_vals)
+
+    if perturb:
+        z_vals = lower + u * (upper - lower)
+
     pts = rays_o[:, None, :] + rays_d[:, None, :] * z_vals[..., None]
     return pts, z_vals
     # ======= DO NOT MODIFY CODE OUTSIDE THIS BLOCK =======
@@ -199,10 +220,26 @@ def raw_to_outputs(
     # in the handout. Do not normalize weights to sum to one. Avoid a Python
     # loop over samples; torch.cumprod can form the exclusive prefix product.
     sample_rgb = torch.sigmoid(raw[..., :3])
-    weights = torch.zeros_like(z_vals)
-    rgb_map = sample_rgb.mean(dim=1)
-    depth_map = torch.zeros(raw.shape[0], device=raw.device, dtype=raw.dtype)
-    acc_map = torch.zeros(raw.shape[0], device=raw.device, dtype=raw.dtype)
+    sigma = torch.relu(raw[..., 3])
+
+    gaps = z_vals[..., 1:] - z_vals[..., :-1]
+    gaps = torch.cat([gaps, torch.full_like(z_vals[..., :1], 1.0e10)], dim=-1)
+    dists = gaps * torch.linalg.norm(rays_d, dim=-1, keepdim=True)
+
+    alpha = 1.0 - torch.exp(-sigma * dists)
+
+    survive = torch.cat([torch.ones_like(alpha[..., :1]), 1.0 - alpha + 1.0e-10], dim=-1)
+    transmittance = torch.cumprod(survive, dim=-1)[..., :-1]
+
+    weights = transmittance * alpha
+
+    rgb_map = (weights[..., None] * sample_rgb).sum(dim=-2)
+    depth_map = (weights * z_vals).sum(dim=-1)
+    acc_map = weights.sum(dim=-1)
+
+    if white_background:
+        rgb_map = rgb_map + (1.0 - acc_map[..., None])
+
     return {"rgb": rgb_map, "depth": depth_map, "acc": acc_map, "weights": weights, "sample_rgb": sample_rgb}
     # ======= DO NOT MODIFY CODE OUTSIDE THIS BLOCK =======
 
