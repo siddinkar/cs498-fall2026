@@ -109,11 +109,18 @@ def composite_opaque_sphere(
     # 3. Compute sphere visibility as one minus the accumulated front weight.
     # 4. On hits, return front_rgb + visibility * ball_rgb. On misses, preserve
     #    nerf_outputs["rgb"]. Visibility should be zero for misses.
-    num_rays = z_vals.shape[0]
-    return {
-        "rgb": nerf_outputs["rgb"].clone(),
-        "visibility": torch.zeros(num_rays, device=z_vals.device, dtype=z_vals.dtype),
-    }
+    weights = nerf_outputs["weights"]
+    front = (z_vals < hit_depth[:, None]).to(weights.dtype)
+    front_weights = weights * front
+
+    front_rgb = (front_weights[..., None] * nerf_outputs["sample_rgb"]).sum(dim=-2)
+    visibility = (1.0 - front_weights.sum(dim=-1)).clamp(0.0, 1.0)
+
+    hit_rgb = front_rgb + visibility[:, None] * ball_rgb
+    rgb = torch.where(hit_mask[:, None], hit_rgb, nerf_outputs["rgb"])
+    visibility = torch.where(hit_mask, visibility, torch.zeros_like(visibility))
+
+    return {"rgb": rgb, "visibility": visibility}
     # ======= DO NOT MODIFY CODE OUTSIDE THIS BLOCK =======
 
 
