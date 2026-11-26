@@ -386,11 +386,19 @@ def build_density_grid(
     #   5. Use any fixed normalized viewing direction for the RGB branch.
     #   6. Read raw[..., 3], apply the same nonnegative density activation as
     #      the renderer, and reshape to (R, R, R).
-    coords = torch.linspace(bounds[0], bounds[1], resolution, device=device)
+    if resolution < 2:
+        raise ValueError("resolution must be at least 2")
+    if chunk_size <= 0:
+        raise ValueError("chunk_size must be positive")
+
+    first_param = next(model.parameters(), None)
+    dtype = first_param.dtype if first_param is not None else torch.float32
+
+    coords = torch.linspace(bounds[0], bounds[1], resolution, device=device, dtype=dtype)
     grid_x, grid_y, grid_z = torch.meshgrid(coords, coords, coords, indexing="ij")
     points = torch.stack([grid_x, grid_y, grid_z], dim=-1).reshape(-1, 3)
 
-    view_dir = torch.tensor([[0.0, 0.0, -1.0]], device=device)
+    view_dir = torch.tensor([[0.0, 0.0, -1.0]], device=device, dtype=dtype)
     embedded_dir = positional_encoding(view_dir, int(cfg["num_freqs_dir"]))
 
     was_training = model.training
